@@ -40,7 +40,7 @@
             <div class="card space-y-3 self-start">
                 <h2 class="text-lg font-semibold">Löschen</h2>
                 @if ($hasHistory)
-                    <p class="text-sm text-stone-600">{{ $user->name }} hat Ablesungen erfasst oder geprüft und steht im Verlauf. Der Zugang kann deshalb nicht gelöscht, aber gesperrt werden.</p>
+                    <p class="text-sm text-stone-600">{{ $user->name }} hat Ablesungen erfasst, geprüft oder Abrechnungen versendet und steht im Verlauf. Der Zugang kann deshalb nicht gelöscht, aber gesperrt werden.</p>
                 @else
                     <p class="text-sm text-stone-600">Der Zugang hat keine Spuren im Verlauf und kann gelöscht werden.</p>
                     <details>

@@ -71,14 +71,15 @@ class User extends Authenticatable
     }
 
     /**
-     * Readings this user recorded or reviewed. Users with such a history
-     * stay in the system (locked), so the history keeps their name.
+     * Readings this user recorded or reviewed, bills this user issued. Users
+     * with such a history stay in the system (locked), so the history keeps their name.
      */
-    public function hasReadingHistory(): bool
+    public function hasHistory(): bool
     {
         return Reading::query()
             ->where('recorded_by', $this->getKey())
             ->orWhere('flag_reviewed_by', $this->getKey())
-            ->exists();
+            ->exists()
+            || InvoiceDispatch::query()->where('sent_by', $this->getKey())->exists();
     }
 }

@@ -73,10 +73,10 @@ class UserAdministration
                 throw new UserChangeRejected('user', 'Das ist der letzte aktive Vorstandszugang. Er kann nicht gelöscht werden.');
             }
 
-            if ($user->hasReadingHistory()) {
+            if ($user->hasHistory()) {
                 throw new UserChangeRejected(
                     'user',
-                    'Dieser Benutzer hat Ablesungen erfasst oder geprüft und steht im Verlauf. Bitte den Zugang sperren statt löschen.',
+                    'Dieser Benutzer hat Ablesungen erfasst, geprüft oder Abrechnungen versendet und steht im Verlauf. Bitte den Zugang sperren statt löschen.',
                 );
             }
 

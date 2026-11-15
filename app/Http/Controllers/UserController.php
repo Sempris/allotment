@@ -35,7 +35,7 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        return view('users.form', $this->formData($user) + ['hasHistory' => $user->hasReadingHistory()]);
+        return view('users.form', $this->formData($user) + ['hasHistory' => $user->hasHistory()]);
     }
 
     public function update(UserRequest $request, User $user): RedirectResponse
