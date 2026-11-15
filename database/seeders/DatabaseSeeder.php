@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\MeterType;
 use App\Enums\ReadingSource;
+use App\Enums\Role;
 use App\Models\Plot;
 use App\Models\Tariff;
 use App\Models\User;
@@ -24,6 +25,14 @@ class DatabaseSeeder extends Seeder
             'name' => 'Erika Gärtner',
             'email' => 'vorstand@example.org',
             'password' => Hash::make('gartenzwerg'),
+            'role' => Role::Board,
+        ]);
+
+        User::create([
+            'name' => 'Karl Kassner',
+            'email' => 'kasse@example.org',
+            'password' => Hash::make('gartenzwerg'),
+            'role' => Role::Treasurer,
         ]);
 
         $tenants = ['Familie Yilmaz', 'Hans Becker', 'Olga Petrenko', 'Familie Schulte', 'Mia Krüger', 'Jonas Weber', 'Familie Nowak', 'Sabine Lange'];
@@ -32,6 +41,17 @@ class DatabaseSeeder extends Seeder
 
         foreach ($tenants as $i => $tenant) {
             $plot = Plot::create(['number' => (string) ($i + 1), 'tenant_name' => $tenant]);
+
+            // Plot 3 has a tenant login that sees only this plot.
+            if ($plot->number === '3') {
+                User::create([
+                    'name' => $tenant,
+                    'email' => 'paechter@example.org',
+                    'password' => Hash::make('gartenzwerg'),
+                    'role' => Role::Tenant,
+                    'plot_id' => $plot->id,
+                ]);
+            }
             [$water, $power] = $profiles[$i];
 
             $meters = [
