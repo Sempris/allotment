@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\MeterType;
 use App\Enums\ReadingSource;
-use App\Exceptions\MeterExchangeRejected;
+use App\Exceptions\MeterChangeRejected;
 use App\Models\Meter;
 use App\Models\Reading;
 use App\Services\ConsumptionCalculator;
@@ -40,7 +40,7 @@ class MeterExchangeTest extends TestCase
         try {
             $exchange();
             $this->fail('The exchange should have been rejected.');
-        } catch (MeterExchangeRejected $e) {
+        } catch (MeterChangeRejected $e) {
             $this->assertSame($field, $e->field);
         }
 
@@ -102,7 +102,7 @@ class MeterExchangeTest extends TestCase
         try {
             $this->exchange(131_500);
             $this->fail('The exchange should have been rejected.');
-        } catch (MeterExchangeRejected $e) {
+        } catch (MeterChangeRejected $e) {
             $this->assertSame('final_value', $e->field);
         }
 
@@ -111,7 +111,7 @@ class MeterExchangeTest extends TestCase
 
     public function test_the_exchange_date_must_not_lie_before_the_last_reading(): void
     {
-        $this->assertRejected('installed_on', fn () => $this->exchange(110_000, '2025-10-01'));
+        $this->assertRejected('date', fn () => $this->exchange(110_000, '2025-10-01'));
     }
 
     public function test_the_new_meter_must_have_the_same_type(): void
@@ -123,7 +123,7 @@ class MeterExchangeTest extends TestCase
     {
         $this->exchange(131_400);
 
-        $this->expectException(MeterExchangeRejected::class);
+        $this->expectException(MeterChangeRejected::class);
         app(MeterExchange::class)->exchange($this->old, Carbon::parse('2026-07-01'), 140_000, MeterType::Water, 'W-NEU-2', 0);
     }
 }

@@ -8,6 +8,7 @@ enum ReadingSource: string
     case Import = 'import';
     case Correction = 'correction';
     case Exchange = 'exchange';
+    case Removal = 'removal';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum ReadingSource: string
             self::Import => 'CSV-Import',
             self::Correction => 'Korrektur',
             self::Exchange => 'Zählertausch',
+            self::Removal => 'Ausbau',
         };
     }
 }
