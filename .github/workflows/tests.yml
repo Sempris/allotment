@@ -62,7 +62,10 @@ jobs:
 
       # phpunit.xml only sets defaults; these variables decide which database the suite uses.
       # The suite includes ConcurrentReadingsTest, which lets two processes race on that database.
-      - run: php artisan test
+      - name: php artisan test (${{ matrix.database }})
+        run: |
+          php artisan about --only=drivers | grep -i database
+          php artisan test
         env:
           DB_CONNECTION: ${{ matrix.database }}
           DB_HOST: 127.0.0.1
