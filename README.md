@@ -21,7 +21,8 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 
 ## Funktionen
 
-- **Parzellen und Zähler** verwalten, inklusive **Zählertausch** (alter Zähler wird zum Einbaudatum des neuen ausgebaut).
+- **Parzellen und Zähler** verwalten, inklusive **Zählertausch**: Der Endstand des alten Zählers ist
+  Pflicht und wird als Ablesung gespeichert, damit der Verbrauch bis zum Ausbau abgerechnet wird.
 - **Ablesungen erfassen**, einzeln im Formular oder als **CSV-Import** für den ganzen Ablesetag.
 - **Plausibilitätsprüfung** für jeden Wert, egal über welchen Weg er kommt:
   - *abgelehnt:* Stand kleiner als der vorherige, größer als ein späterer, Datum in der Zukunft,
@@ -146,8 +147,6 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 - **Jahresverbrauch als Differenz der Ablesungen:** Die Abrechnung nimmt die letzte Ablesung im
   Jahr minus die letzte Ablesung davor. Das passt zum üblichen festen Ablesetag; bei sehr
   unterschiedlichen Ablesedaten wäre eine Interpolation auf einen Stichtag genauer.
-- **Zählertausch:** Der Endstand des alten Zählers muss vorher als Ablesung erfasst werden; die App
-  erinnert daran, erzwingt es aber nicht.
 - **Keine Bearbeitung oder Löschung** von Parzellen, Zählern und Tarifen über die Oberfläche
   (Tarife lassen sich überschreiben).
 - **Keine Rechnungen als PDF** und kein Versand per E-Mail, nur der CSV-Export.

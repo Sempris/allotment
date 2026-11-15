@@ -64,3 +64,15 @@ Alter Wasserzähler, letzte Ablesung 17.10.2025 mit 120,000 m³. Tausch am 01.06
 
 - Tausch rückgängig machen (kommt mit Plan 02 über das Bearbeiten des Ausbaudatums).
 - Ausbau ohne Ersatz (Parzelle wird stillgelegt) – ebenfalls Plan 02.
+
+## Ergebnis
+
+Umgesetzt wie geplant, mit zwei Ergänzungen, die erst beim Schreiben der Tests auffielen:
+
+- Ein ausgefüllter Endstand **ohne** ausgewählten ersetzten Zähler wird abgelehnt. Vorher wäre
+  der Wert stillschweigend verworfen worden.
+- Die Ablehnung trägt das betroffene Formularfeld (`MeterExchangeRejected::$field`), damit die
+  Meldung am richtigen Feld steht und nicht pauschal über dem Formular.
+
+Nebenbei: `TestCase` ruft `withoutVite()` auf. Die Tests liefen bisher nur nach `npm run build`
+grün; das fiel auf, weil die Suite hier vor dem ersten Frontend-Build lief.
