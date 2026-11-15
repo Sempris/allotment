@@ -4,8 +4,6 @@ Eine kleine Laravel-Anwendung, mit der der Vorstand eines Kleingartenvereins die
 Wasser- und Stromzählerstände aller Parzellen erfasst, auf Plausibilität prüft und daraus die
 Jahresabrechnung erstellt.
 
-Demo-Bewerbung für InnoGE · Wadim Skworzow · [Portfolio](https://sempris.github.io/portfolio-website)
-
 ## Die Idee
 
 In vielen Kleingartenvereinen läuft die Zählerablesung so: Einmal im Jahr gehen zwei
