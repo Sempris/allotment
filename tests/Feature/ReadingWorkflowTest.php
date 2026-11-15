@@ -6,6 +6,7 @@ use App\Enums\ReadingSource;
 use App\Models\Meter;
 use App\Models\Reading;
 use App\Models\User;
+use App\Services\PlausibilityChecker;
 use App\Services\ReadingRecorder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -131,12 +132,44 @@ class ReadingWorkflowTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->post(route('meters.store', $old->plot_id), [
                 'type' => 'water', 'serial_number' => 'W-NEU-1', 'installed_on' => '2026-06-01',
-                'initial_value' => '0', 'replaces_meter_id' => $old->id,
+                'initial_value' => '0', 'replaces_meter_id' => $old->id, 'final_value' => '98,5',
             ])
             ->assertSessionHasNoErrors();
 
         $this->assertSame('2026-06-01', $old->fresh()->removed_on->toDateString());
-        $this->assertTrue(app(\App\Services\PlausibilityChecker::class)
+        $this->assertSame(98_500, $old->effectiveReadings()->sole()->value_milli);
+        $this->assertTrue(app(PlausibilityChecker::class)
             ->check($old->fresh(), Carbon::parse('2026-07-01'), 99_000)->isRejected());
+    }
+
+    public function test_a_meter_exchange_without_final_value_is_rejected_in_the_form(): void
+    {
+        $old = Meter::factory()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->from(route('meters.create', $old->plot_id))
+            ->post(route('meters.store', $old->plot_id), [
+                'type' => 'water', 'serial_number' => 'W-NEU-1', 'installed_on' => '2026-06-01',
+                'initial_value' => '0', 'replaces_meter_id' => $old->id,
+            ])
+            ->assertRedirect(route('meters.create', $old->plot_id))
+            ->assertSessionHasErrors('final_value');
+
+        $this->assertNull($old->fresh()->removed_on);
+        $this->assertSame(1, Meter::count());
+    }
+
+    public function test_a_final_value_without_exchange_is_not_silently_ignored(): void
+    {
+        $existing = Meter::factory()->create();
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('meters.store', $existing->plot_id), [
+                'type' => 'water', 'serial_number' => 'W-NEU-1', 'installed_on' => '2026-06-01',
+                'initial_value' => '0', 'final_value' => '98,5',
+            ])
+            ->assertSessionHasErrors('final_value');
+
+        $this->assertSame(1, Meter::count());
     }
 }
