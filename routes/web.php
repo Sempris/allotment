@@ -8,6 +8,7 @@ use App\Http\Controllers\MeterController;
 use App\Http\Controllers\PlotController;
 use App\Http\Controllers\ReadingController;
 use App\Http\Controllers\TariffController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -56,5 +57,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('can:manage-billing')->group(function () {
         Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
         Route::delete('/tariffs/{tariff}', [TariffController::class, 'destroy'])->name('tariffs.destroy');
+    });
+
+    Route::middleware('can:manage-users')->group(function () {
+        Route::resource('users', UserController::class)->except('show');
     });
 });

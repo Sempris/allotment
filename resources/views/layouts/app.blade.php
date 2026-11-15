@@ -19,6 +19,7 @@
                         ['import.create', 'CSV-Import', 'record-readings'],
                         ['billing.index', 'Jahresabrechnung', 'view-club'],
                         ['tariffs.index', 'Tarife', 'view-club'],
+                        ['users.index', 'Benutzer', 'manage-users'],
                     ];
                 @endphp
                 @foreach ($navigation as [$route, $label, $ability])
