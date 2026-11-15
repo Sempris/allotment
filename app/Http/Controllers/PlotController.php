@@ -38,6 +38,35 @@ class PlotController extends Controller
         // Active meters first, then water before electricity.
         $meters = $plot->meters->sortBy(fn ($m) => [$m->removed_on !== null, $m->type->sortOrder(), $m->id])->values();
 
-        return view('plots.show', ['plot' => $plot, 'meters' => $meters]);
+        return view('plots.show', [
+            'plot' => $plot,
+            'meters' => $meters,
+            // Bills the club has issued for this plot, newest dispatch per year.
+            'issuedBills' => $plot->invoiceDispatches()->orderByDesc('id')->get()->unique('year')->sortByDesc('year')->values(),
+        ]);
+    }
+
+    public function edit(Plot $plot): View
+    {
+        return view('plots.edit', ['plot' => $plot, 'hasMeters' => $plot->meters()->exists()]);
+    }
+
+    public function update(PlotRequest $request, Plot $plot): RedirectResponse
+    {
+        $plot->update($request->validated());
+
+        return redirect()->route('plots.show', $plot)->with('status', 'Parzelle gespeichert.');
+    }
+
+    public function destroy(Plot $plot): RedirectResponse
+    {
+        // Plots with meters keep their history; the foreign key would refuse the delete anyway.
+        if ($plot->meters()->exists() || $plot->invoiceDispatches()->exists()) {
+            return back()->withErrors(['plot' => 'Die Parzelle hat Zähler oder herausgegebene Abrechnungen und kann nicht gelöscht werden. Bei einem Pächterwechsel bitte nur den Namen ändern.']);
+        }
+
+        $plot->delete();
+
+        return redirect()->route('plots.index')->with('status', "Parzelle {$plot->number} gelöscht.");
     }
 }

@@ -39,6 +39,12 @@ final class Milli
 
     public static function formatCents(int $cents): string
     {
-        return number_format($cents / 100, 2, ',', '.').' €';
+        return self::formatCentsPlain($cents).' €';
+    }
+
+    /** Amount without currency sign, e.g. for form fields: 280 -> "2,80". */
+    public static function formatCentsPlain(int $cents): string
+    {
+        return number_format($cents / 100, 2, ',', '.');
     }
 }

@@ -4,8 +4,6 @@ Eine kleine Laravel-Anwendung, mit der der Vorstand eines Kleingartenvereins die
 Wasser- und Stromzählerstände aller Parzellen erfasst, auf Plausibilität prüft und daraus die
 Jahresabrechnung erstellt.
 
-Demo-Bewerbung für InnoGE · Wadim Skworzow · [Portfolio](https://sempris.github.io/portfolio-website)
-
 ## Die Idee
 
 In vielen Kleingartenvereinen läuft die Zählerablesung so: Einmal im Jahr gehen zwei
@@ -21,7 +19,11 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 
 ## Funktionen
 
-- **Parzellen und Zähler** verwalten, inklusive **Zählertausch** (alter Zähler wird zum Einbaudatum des neuen ausgebaut).
+- **Parzellen und Zähler** verwalten, inklusive **Zählertausch**: Der Endstand des alten Zählers ist
+  Pflicht und wird als Ablesung gespeichert, damit der Verbrauch bis zum Ausbau abgerechnet wird.
+- **Stammdaten pflegen:** Parzellen (z. B. Pächterwechsel), Zähler und Tarife bearbeiten; Zähler
+  auch ohne Ersatz ausbauen und einen Ausbau zurücknehmen. Gelöscht werden kann nur, woran keine
+  Historie hängt (Parzelle ohne Zähler, Zähler ohne Ablesungen).
 - **Ablesungen erfassen**, einzeln im Formular oder als **CSV-Import** für den ganzen Ablesetag.
 - **Plausibilitätsprüfung** für jeden Wert, egal über welchen Weg er kommt:
   - *abgelehnt:* Stand kleiner als der vorherige, größer als ein späterer, Datum in der Zukunft,
@@ -31,12 +33,24 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 - **Prüfliste** auf der Übersicht: auffällige Werte bestätigen („Ist korrekt“) oder korrigieren.
 - **Korrekturen ohne Datenverlust:** Die ursprüngliche Ablesung bleibt durchgestrichen im Verlauf,
   die Korrektur braucht eine Begründung.
+- **Rollen und Benutzerverwaltung:** Vorstand, Kassierer/in und Pächter/in mit Lesezugang auf die
+  eigene Parzelle. Zugänge legt der Vorstand in der Oberfläche an; wer im Verlauf der Ablesungen
+  steht, wird gesperrt statt gelöscht, und der letzte Vorstand kann sich nicht aussperren.
 - **Jahresabrechnung** pro Parzelle mit Tarifen je Jahr (Preis je Einheit + Grundgebühr) und **CSV-Export** für Excel.
+- **Abrechnung auf einen Stichtag:** Liegen die Ablesetage weit auseinander, lässt sich ein Jahr auf
+  einen Stichtag umrechnen. Die Stände werden zwischen den Ablesungen interpoliert und sind überall
+  mit ≈ gekennzeichnet; jede Zeile zeigt Anfangs- und Endstand mit Datum.
+- **Abrechnung als PDF** je Parzelle mit Anfangs- und Endstand, Preis, Grundgebühr und Bankverbindung;
+  **Versand per E-Mail** (einzeln oder „alle offenen“) oder „ausgedruckt übergeben“. Herausgegeben
+  wird nur, was vollständig ist und keine zur Prüfung markierte Ablesung mehr enthält. Ein
+  Versandprotokoll zeigt je Parzelle den Stand und warnt, wenn sich der Betrag danach ändert.
+  Pächter laden ihre herausgegebene Abrechnung selbst herunter.
 - Übersicht, welche Zähler im laufenden Jahr **noch nicht abgelesen** sind.
 
 ## Schnellstart
 
-Voraussetzungen: PHP 8.2+, Composer, Node.js 20+, SQLite.
+Voraussetzungen: PHP 8.2+, Composer, Node.js 20+. Als Datenbank genügt SQLite (Vorgabe); MySQL und
+PostgreSQL werden ebenfalls unterstützt und in der CI mitgetestet (`DB_CONNECTION` in `.env`).
 
 ```bash
 git clone <repo-url> zaehlerstand && cd zaehlerstand
@@ -49,14 +63,22 @@ npm install && npm run build
 php artisan serve
 ```
 
-Dann <http://localhost:8000> öffnen und anmelden mit
+Dann <http://localhost:8000> öffnen und anmelden. Alle Demo-Zugänge haben das Passwort `gartenzwerg`:
 
-- **E-Mail:** `vorstand@example.org`
-- **Passwort:** `gartenzwerg`
+| E-Mail | Rolle | darf |
+|--------|-------|------|
+| `vorstand@example.org` | Vorstand | alles: Stammdaten, Ablesungen, Abrechnung, Benutzer |
+| `kasse@example.org` | Kassierer/in | alles sehen, Tarife und Abrechnung pflegen, keine Zählerstände ändern |
+| `paechter@example.org` | Pächter/in (Parzelle 3) | nur die eigene Parzelle sehen |
 
 Die Demodaten enthalten acht Parzellen mit Ablesungen von 2023 bis 2026. Zwei Parzellen sind
 für 2026 noch nicht abgelesen, und Parzelle 7 hat 2026 einen auffällig hohen Wasserverbrauch
-(ein Rohrbruch), der in der Prüfliste erscheint.
+(ein Rohrbruch), der in der Prüfliste erscheint – ihre Abrechnung lässt sich erst versenden, wenn
+der Wert bestätigt oder korrigiert ist. Die Parzellen 2 und 6 haben keine E-Mail-Adresse und
+bekommen die Abrechnung ausgedruckt.
+
+E-Mails landen in der Demo in `storage/logs/laravel.log` (`MAIL_MAILER=log`). Vereinsname, Anschrift
+und Bankverbindung für die PDF stehen in `.env` (`CLUB_*`).
 
 Tests ausführen:
 
@@ -81,17 +103,35 @@ Rohrbruch sein → speichern, aber markieren). Die Entscheidung bleibt beim Vors
 (1 m³ = 1000), Preise in Cent. Gerundet wird genau einmal, beim Betrag, kaufmännisch auf ganze
 Cent. Die Klasse `App\Support\Milli` übernimmt Einlesen (auch deutsches Format wie `1.234,567`) und Ausgabe.
 
+**Jahre schließen lückenlos aneinander an.** Jedes Abrechnungsjahr endet je Zähler an einem
+Grenzstand, das nächste beginnt dort: ohne Stichtag ist das die letzte Ablesung im Jahr, mit
+Stichtag der interpolierte Stand an diesem Tag. So wird beim Umstellen kein Verbrauch doppelt oder
+gar nicht abgerechnet. Interpoliert wird ganzzahlig; hochgerechnet wird nie, weil sich ein
+hochgerechneter Wert – und damit eine verschickte Abrechnung – mit der nächsten Ablesung ändern würde.
+
 **Ablesungen werden nie überschrieben.** Eine Korrektur legt eine neue Ablesung an und verweist die
 alte darauf (`superseded_by_id`). Berechnungen nutzen nur die „wirksamen“ Ablesungen
 (`effectiveReadings`). So bleibt nachvollziehbar, was geändert wurde, von wem und warum.
 
-**Sperre gegen parallele Eingaben.** Beim Speichern wird der Zähler mit `lockForUpdate()` gesperrt,
+**Sperre gegen parallele Eingaben – auf jeder Datenbank.** Beim Speichern wird der Zähler gesperrt,
 damit zwei gleichzeitige Eingaben (z. B. Import und Formular) nicht beide die Prüfung „nicht kleiner
-als der vorherige Stand“ gegen denselben alten Stand bestehen.
+als der vorherige Stand“ gegen denselben alten Stand bestehen. MySQL und PostgreSQL sperren die
+Zeile (`SELECT … FOR UPDATE`). SQLite kennt keine Zeilensperren; dort nimmt `Model::findAndLock()`
+als erste Anweisung der Transaktion die Schreibsperre der Datenbank. Ein Test mit zwei echten
+Prozessen belegt das auf allen drei Datenbanken – und schlägt fehl, wenn man die Sperre entfernt.
 
 **CSV-Import zeilenweise.** Jede Zeile wird einzeln geprüft und gespeichert. Eine fehlerhafte Zeile
 blockiert nicht den ganzen Ablesetag; das Ergebnis zeigt pro Zeile, was importiert, markiert oder
 abgelehnt wurde und warum. Nur eine falsche Kopfzeile lehnt die ganze Datei ab.
+
+**Die Prüfliste hat Folgen.** Eine Abrechnung lässt sich erst herausgeben, wenn keine ihrer
+Ablesungen mehr zur Prüfung markiert ist. Sonst wäre die Markierung nur ein Hinweis, den man
+überlesen kann – und der Zahlendreher landet als Rechnung beim Pächter.
+
+**Rechte heißen nach dem, was sie erlauben.** Routen und Views fragen nie „ist Vorstand?“, sondern
+`record-readings`, `manage-billing`, `view-plot` … Die Zuordnung Rolle → Recht steht an genau einer
+Stelle (`AppServiceProvider`) und ist als Matrix getestet. Die Kassiererin rechnet ab, ändert aber
+keine Zählerstände.
 
 **Bewusst einfach gehalten:** serverseitig gerendertes Blade mit Tailwind CSS, kein
 JavaScript-Framework. Für ein Werkzeug, das ein Vorstand einmal im Jahr intensiv nutzt, bringt eine
@@ -101,62 +141,110 @@ Aufbau im Überblick:
 
 ```
 app/
-├── Enums/              MeterType (Wasser/Strom, Einheit, Höchstwert), ReadingSource
+├── Enums/              MeterType (Wasser/Strom, Einheit, Höchstwert), ReadingSource, Role
 ├── Services/
 │   ├── ReadingRecorder.php        einziger Schreibweg für Ablesungen (+ Korrektur)
 │   ├── PlausibilityChecker.php    harte Regeln und Verbrauchswarnung
-│   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler
+│   ├── MeterMaintenance.php       Zähler ändern, ausbauen, löschen – geprüft gegen die Ablesungen
+│   ├── MeterExchange.php          Zählertausch: Endstand + Ausbau + neuer Zähler in einer Transaktion
+│   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler, optional interpoliert auf einen Stichtag
 │   ├── BillingService.php         Jahresabrechnung je Parzelle
-│   └── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
+│   ├── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
+│   ├── InvoiceRenderer.php        Abrechnung einer Parzelle als PDF
+│   ├── InvoiceDispatcher.php      Abrechnungen herausgeben (E-Mail/Ausdruck) mit Versandprotokoll
+│   └── UserAdministration.php     Zugänge anlegen, sperren, löschen – ohne den Verein auszusperren
 ├── Support/Milli.php   Zählerstände und Geld ohne Floats
 └── Http/               schlanke Controller, Validierung in Form Requests
 ```
 
 ## Qualitätssicherung
 
+- **Drei Datenbanken in der CI:** Die gesamte Suite läuft bei jedem Push gegen SQLite, MySQL 8.4 und
+  PostgreSQL 16, einschließlich eines Paralleltests mit zwei echten Prozessen.
 - **Automatisierte Tests** (PHPUnit, `php artisan test`): Einlesen von Zahlen, alle Plausibilitätsregeln,
   Erfassen, Ablehnen und Korrigieren über HTTP, Zählertausch, Prüfliste, CSV-Import mit gemischten
-  Zeilen, Verbrauchs- und Kostenberechnung bis auf den Cent, fehlende Ablesungen und Tarife,
+  Zeilen, Verbrauchs- und Kostenberechnung bis auf den Cent, Stichtagsumrechnung mit von Hand
+  nachrechenbaren Beispielen (Zähler mit genau 0,1 m³ pro Tag), fehlende Ablesungen und Tarife,
   CSV-Export und Zugriffsschutz.
 - **Fachliche Testfälle statt Zufallsdaten:** Die Tests rechnen konkrete Beispiele nach
   (z. B. 38,255 m³ × 2,80 € = 107,11 €), damit ein Fehler in der Rundung sofort auffällt.
-- **Sicherheit:** alle Seiten nur nach Anmeldung, Login mit Rate-Limit (5 Versuche pro Minute),
+- **Sicherheit:** alle Seiten nur nach Anmeldung, Rechte je Rolle in den Routen durchgesetzt
+  (nicht nur ausgeblendete Links) und als Matrix getestet, Login mit Rate-Limit (5 Versuche pro Minute),
   CSRF-Schutz in allen Formularen, Validierung jeder Eingabe in Form Requests, Upload auf
   CSV/TXT bis 1 MB begrenzt, Ausgabe in Blade escaped.
-- **Manuell geprüft:** alle Seiten mit den Demodaten im Browser durchgegangen, inklusive Import der Beispieldatei.
+- **Manuell geprüft:** alle Seiten mit den Demodaten im Browser durchgegangen (je Rolle), inklusive
+  Import der Beispieldatei, Stichtagsumrechnung, PDF-Abruf und Versand „alle offenen“ ins Mail-Log.
 
 ## Eingesetzte KI-Werkzeuge und Vorgehen
 
-Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein Vorgehen:
+Die Anwendung ist mit **Claude Code (Anthropic) als Coding-Agent** entstanden. Wie der Agent
+gesteuert wird, steht im Repository und lässt sich an der Git-Historie nachvollziehen:
 
-1. **Fachlich vorgeben, nicht nur „bau mir eine App“:** Zuerst habe ich die Domäne und die
-   Regeln festgelegt (harte Fehler vs. Warnungen, Korrektur ohne Überschreiben, ganzzahlige
-   Beträge, ein Schreibweg für alle Eingaben). Viele davon kenne ich aus meiner Arbeit an einer
-   ESG-Plattform, wo jede Kennzahl für die Prüfung nachvollziehbar sein muss.
-2. **In kleinen Schritten umsetzen lassen:** Datenmodell → Services → HTTP-Schicht → Oberfläche → Tests.
-3. **Ergebnisse kritisch prüfen:** Jeder Schritt wurde gelesen und gegen die Regeln geprüft,
-   bevor der nächste kam. Die Tests rechnen Beispiele mit festen Zahlen nach, statt nur zu prüfen,
-   dass „etwas“ gespeichert wurde.
-4. **Bewusst entscheiden, was nicht gebaut wird:** siehe „Bekannte Grenzen“.
+- **[`CLAUDE.md`](CLAUDE.md) – der Agent-Kontext.** Fachliche Invarianten (ein Schreibweg für
+  Ablesungen, keine Floats, nichts schätzen ohne Kennzeichnung …), Konventionen, Arbeitsweise und
+  was der Agent nicht ohne Rückfrage ändern darf. Die Datei wächst mit: Jede neue Regel kommt im
+  selben Zug wie der Code, der sie braucht (aktuell elf Invarianten).
+- **[`docs/plaene/`](docs/plaene/README.md) – ein Plan je Aufgabe, vor dem Code.** Ausgangslage,
+  Entscheidungen mit verworfenen Alternativen, Schritte, Testfälle mit Zahlen, Nicht-Ziele. Am Ende
+  jedes Plans steht unter „Ergebnis“, was bei der Umsetzung anders lief als gedacht – z. B. dass
+  ein nach dem Stichtag ausgebauter Zähler sonst nie abgerechnet worden wäre (Plan 04) oder dass
+  SQLites `IMMEDIATE`-Modus in Laravel erst ab PHP 8.4 greift (Plan 06).
+- **Git-Historie in Planschritten.** Erst der Plan, dann je Schritt ein Commit mit Tests
+  (Service → HTTP/Oberfläche → Doku), jeder für sich grün.
+
+Mein Anteil dabei:
+
+1. **Fachlich vorgeben, nicht nur „bau mir eine App“:** Domäne und Regeln festlegen (harte Fehler
+   vs. Warnungen, Korrektur ohne Überschreiben, ganzzahlige Beträge, ein Schreibweg für alle
+   Eingaben). Viele davon kenne ich aus meiner Arbeit an einer ESG-Plattform, wo jede Kennzahl für
+   die Prüfung nachvollziehbar sein muss.
+2. **In kleinen Schritten umsetzen lassen** und jeden Schritt gegen Plan und Invarianten prüfen,
+   bevor der nächste kommt.
+3. **Ergebnisse nachrechnen:** Die Tests rechnen Beispiele mit festen Zahlen nach, statt nur zu
+   prüfen, dass „etwas“ gespeichert wurde; Oberfläche und PDF werden zusätzlich im Browser angesehen.
+4. **Bewusst entscheiden, was nicht gebaut wird:** siehe „Bekannte Grenzen“ und die Nicht-Ziele
+   der Pläne.
+
+Die erste Fassung (bis Commit `e978597`) entstand noch ohne diesen Rahmen, in wenigen großen
+Commits. Die zweite Runde – der Abbau der damaligen „Bekannten Grenzen“ – folgt ihm durchgehend.
 
 ## Bekannte Grenzen
 
-- **Eine Rolle:** Alle Benutzer sind Vorstand. Es gibt kein Rechtekonzept und keinen Zugang für
-  Pächterinnen und Pächter; Benutzer werden per Seeder bzw. `php artisan tinker` angelegt.
-- **Jahresverbrauch als Differenz der Ablesungen:** Die Abrechnung nimmt die letzte Ablesung im
-  Jahr minus die letzte Ablesung davor. Das passt zum üblichen festen Ablesetag; bei sehr
-  unterschiedlichen Ablesedaten wäre eine Interpolation auf einen Stichtag genauer.
-- **Zählertausch:** Der Endstand des alten Zählers muss vorher als Ablesung erfasst werden; die App
-  erinnert daran, erzwingt es aber nicht.
-- **Keine Bearbeitung oder Löschung** von Parzellen, Zählern und Tarifen über die Oberfläche
-  (Tarife lassen sich überschreiben).
-- **Keine Rechnungen als PDF** und kein Versand per E-Mail, nur der CSV-Export.
-- **SQLite** reicht für einen Verein. Die Sperre mit `lockForUpdate()` wirkt erst mit MySQL oder
-  PostgreSQL wirklich; SQLite sperrt ohnehin die ganze Datenbank beim Schreiben.
+Die sechs Grenzen der ersten Fassung sind abgebaut; zu jeder gibt es einen Plan mit Entscheidungen
+und Ergebnis:
+
+| Frühere Grenze | Jetzt | Plan |
+|----------------|-------|------|
+| Zählertausch: Endstand nur als Hinweis | Endstand ist Pflicht, Tausch in einer Transaktion | [01](docs/plaene/01-zaehlertausch-endstand.md) |
+| Keine Bearbeitung/Löschung von Stammdaten | Bearbeiten, Ausbauen, Löschen – geprüft gegen die Historie | [02](docs/plaene/02-stammdaten-bearbeiten.md) |
+| Eine Rolle, Benutzer per Seeder | Drei Rollen, Benutzerverwaltung, Pächterzugang | [03](docs/plaene/03-rollen-und-benutzer.md) |
+| Jahresverbrauch nur als Differenz | Wahlweise Umrechnung auf einen Stichtag | [04](docs/plaene/04-stichtagsabrechnung.md) |
+| Nur CSV-Export | PDF-Abrechnung, E-Mail-Versand, Versandprotokoll | [05](docs/plaene/05-pdf-rechnung-und-versand.md) |
+| Sperre wirkt nur mit MySQL/PostgreSQL | Sperre wirkt auf allen drei Datenbanken, per Paralleltest belegt | [06](docs/plaene/06-datenbanken-und-sperren.md) |
+
+Was weiterhin bewusst nicht gelöst ist:
+
+- **Feste Rollen, ein Pächterzugang je Parzelle:** Die drei Rollen sind im Code festgelegt, nicht
+  konfigurierbar. Es gibt kein „Passwort vergessen“ per E-Mail (der Vorstand setzt ein neues
+  Startpasswort) und keine Zwei-Faktor-Anmeldung.
+- **Stichtagsabrechnung ist eine Näherung:** Die Umrechnung auf einen Stichtag nimmt gleichmäßigen
+  Verbrauch zwischen zwei Ablesungen an (im Winter ist das Wasser abgestellt). Für wenige Wochen
+  Verschiebung ist der Fehler klein. Es wird nie über die letzte Ablesung hinaus hochgerechnet.
+- **Kein Jahresabschluss:** Abrechnungen werden nicht festgeschrieben. Wird eine Ablesung später
+  korrigiert, ändert sich die Abrechnung des betroffenen Jahres.
+- **Kein Änderungsprotokoll für Stammdaten:** Ablesungen behalten ihre Historie, geänderte
+  Stammdaten (Pächtername, Anfangsstand eines Zählers) nicht. Ältere Abrechnungen zeigen deshalb
+  den aktuellen Pächternamen.
+- **PDF wird nicht archiviert:** Die Abrechnung entsteht bei jedem Abruf aus den aktuellen Daten.
+  Das Versandprotokoll merkt sich den herausgegebenen Betrag und warnt bei Abweichungen, speichert
+  aber nicht das Dokument. Zahlungseingänge und Mahnungen werden nicht verfolgt.
+- **Zwei gleichzeitige Schreiber sind geprüft, mehr nicht:** Der Paralleltest lässt zwei Eingaben
+  gegeneinander laufen. Lasttests gibt es nicht; für einen Verein mit einer Handvoll Benutzern ist
+  das angemessen. Auf SQLite warten gleichzeitige Schreiber aufeinander (ganze Datenbank), auf MySQL
+  und PostgreSQL nur die, die denselben Zähler betreffen.
 
 ## Mögliche nächste Schritte
 
-- PDF-Rechnung pro Parzelle und Versand an die hinterlegte E-Mail-Adresse
+- Jahresabschluss: Stände und PDF festschreiben, sobald die Abrechnungen herausgegeben sind
 - Ablesung per Smartphone direkt an der Parzelle (die Formulare sind bereits responsiv)
 - Foto des Zählers zur Ablesung speichern, als Beleg bei Rückfragen
-- Rollen: Vorstand, Kassierer, Pächter mit Lesezugriff auf die eigene Parzelle

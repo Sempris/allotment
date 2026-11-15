@@ -21,7 +21,10 @@
                         <option value="{{ $meter->id }}" @selected((string) old('replaces_meter_id') === (string) $meter->id)>{{ $meter->type->label() }} {{ $meter->serial_number }}</option>
                     @endforeach
                 </select>
-                <span class="mt-1 block text-xs text-stone-500">Bitte vorher den Endstand des alten Zählers als Ablesung erfassen.</span>
+            </label>
+            <label class="block text-sm">Endstand des alten Zählers am Tauschtag
+                <input name="final_value" value="{{ old('final_value') }}" inputmode="decimal" placeholder="z. B. 1234,567" class="input">
+                <span class="mt-1 block text-xs text-stone-500">Pflicht beim Zählertausch. Der Endstand wird als Ablesung des alten Zählers gespeichert, damit der Verbrauch bis zum Ausbau abgerechnet wird. Leer lassen nur, wenn der alte Zähler am Tauschtag schon abgelesen wurde.</span>
             </label>
         @endif
         <button class="btn">Speichern</button>

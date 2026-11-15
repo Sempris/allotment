@@ -17,4 +17,10 @@ class Plot extends Model
     {
         return $this->hasMany(Meter::class);
     }
+
+    /** @return HasMany<InvoiceDispatch, $this> */
+    public function invoiceDispatches(): HasMany
+    {
+        return $this->hasMany(InvoiceDispatch::class);
+    }
 }

@@ -22,8 +22,9 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
-            return back()->withErrors(['email' => 'E-Mail oder Passwort ist falsch.'])->onlyInput('email');
+        // Locked users cannot log in. The message does not reveal which part was wrong.
+        if (! Auth::attempt([...$credentials, 'active' => true], $request->boolean('remember'))) {
+            return back()->withErrors(['email' => 'E-Mail oder Passwort ist falsch, oder der Zugang ist gesperrt.'])->onlyInput('email');
         }
 
         $request->session()->regenerate();

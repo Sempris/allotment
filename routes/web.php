@@ -1,13 +1,17 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\BillingPeriodController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MeterController;
 use App\Http\Controllers\PlotController;
 use App\Http\Controllers\ReadingController;
 use App\Http\Controllers\TariffController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -15,27 +19,60 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');
 });
 
-Route::middleware('auth')->group(function () {
+// Billing years in URLs are four digits from 2000 to 2099; anything else is a 404, not an error.
+// Every group below names the ability it needs (see AppServiceProvider::defineAbilities).
+Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+    Route::get('/password', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
 
+    // Start page: overview for board and treasurer, the own plot for tenants.
     Route::get('/', DashboardController::class)->name('dashboard');
 
-    Route::resource('plots', PlotController::class)->only(['index', 'create', 'store', 'show']);
-    Route::get('/plots/{plot}/meters/create', [MeterController::class, 'create'])->name('meters.create');
-    Route::post('/plots/{plot}/meters', [MeterController::class, 'store'])->name('meters.store');
+    Route::middleware('can:manage-master-data')->group(function () {
+        Route::resource('plots', PlotController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
+        Route::get('/plots/{plot}/meters/create', [MeterController::class, 'create'])->name('meters.create');
+        Route::post('/plots/{plot}/meters', [MeterController::class, 'store'])->name('meters.store');
+        Route::get('/meters/{meter}/edit', [MeterController::class, 'edit'])->name('meters.edit');
+        Route::put('/meters/{meter}', [MeterController::class, 'update'])->name('meters.update');
+        Route::delete('/meters/{meter}', [MeterController::class, 'destroy'])->name('meters.destroy');
+        Route::post('/meters/{meter}/retire', [MeterController::class, 'retire'])->name('meters.retire');
+        Route::post('/meters/{meter}/reactivate', [MeterController::class, 'reactivate'])->name('meters.reactivate');
+    });
 
-    Route::get('/meters/{meter}/readings/create', [ReadingController::class, 'create'])->name('readings.create');
-    Route::post('/meters/{meter}/readings', [ReadingController::class, 'store'])->name('readings.store');
-    Route::get('/readings/{reading}/correct', [ReadingController::class, 'editCorrection'])->name('readings.correct');
-    Route::post('/readings/{reading}/correct', [ReadingController::class, 'storeCorrection'])->name('readings.correct.store');
-    Route::post('/readings/{reading}/review', [ReadingController::class, 'review'])->name('readings.review');
+    Route::middleware('can:record-readings')->group(function () {
+        Route::get('/meters/{meter}/readings/create', [ReadingController::class, 'create'])->name('readings.create');
+        Route::post('/meters/{meter}/readings', [ReadingController::class, 'store'])->name('readings.store');
+        Route::get('/readings/{reading}/correct', [ReadingController::class, 'editCorrection'])->name('readings.correct');
+        Route::post('/readings/{reading}/correct', [ReadingController::class, 'storeCorrection'])->name('readings.correct.store');
+        Route::post('/readings/{reading}/review', [ReadingController::class, 'review'])->name('readings.review');
 
-    Route::get('/import', [ImportController::class, 'create'])->name('import.create');
-    Route::post('/import', [ImportController::class, 'store'])->name('import.store');
+        Route::get('/import', [ImportController::class, 'create'])->name('import.create');
+        Route::post('/import', [ImportController::class, 'store'])->name('import.store');
+    });
 
-    Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
-    Route::get('/billing/csv', [BillingController::class, 'csv'])->name('billing.csv');
+    Route::middleware('can:view-club')->group(function () {
+        Route::get('/plots', [PlotController::class, 'index'])->name('plots.index');
+        Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+        Route::get('/billing/csv', [BillingController::class, 'csv'])->name('billing.csv');
+        Route::get('/tariffs', [TariffController::class, 'index'])->name('tariffs.index');
+    });
 
-    Route::get('/tariffs', [TariffController::class, 'index'])->name('tariffs.index');
-    Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
+    Route::get('/plots/{plot}', [PlotController::class, 'show'])->name('plots.show')->can('view-plot', 'plot');
+    Route::get('/billing/{year}/plots/{plot}/invoice', [InvoiceController::class, 'show'])
+        ->where('year', '20[0-9]{2}')->name('invoices.show')->can('view-plot', 'plot');
+
+    Route::middleware('can:manage-billing')->group(function () {
+        Route::post('/billing/key-date', [BillingPeriodController::class, 'store'])->name('billing.key-date.store');
+        Route::delete('/billing/key-date', [BillingPeriodController::class, 'destroy'])->name('billing.key-date.destroy');
+        Route::post('/billing/{year}/invoices/send', [InvoiceController::class, 'sendAll'])->where('year', '20[0-9]{2}')->name('invoices.send-all');
+        Route::post('/billing/{year}/plots/{plot}/invoice/send', [InvoiceController::class, 'send'])->where('year', '20[0-9]{2}')->name('invoices.send');
+        Route::post('/billing/{year}/plots/{plot}/invoice/hand-over', [InvoiceController::class, 'handOver'])->where('year', '20[0-9]{2}')->name('invoices.hand-over');
+        Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
+        Route::delete('/tariffs/{tariff}', [TariffController::class, 'destroy'])->name('tariffs.destroy');
+    });
+
+    Route::middleware('can:manage-users')->group(function () {
+        Route::resource('users', UserController::class)->except('show');
+    });
 });

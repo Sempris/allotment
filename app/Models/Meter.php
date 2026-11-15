@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MeterType;
+use App\Models\Concerns\LocksForUpdate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ use Illuminate\Support\Carbon;
  */
 class Meter extends Model
 {
-    use HasFactory;
+    use HasFactory, LocksForUpdate;
 
     protected $fillable = ['plot_id', 'type', 'serial_number', 'installed_on', 'removed_on', 'initial_value_milli'];
 

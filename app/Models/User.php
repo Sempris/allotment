@@ -3,15 +3,23 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Role;
+use App\Models\Concerns\LocksForUpdate;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property Role $role
+ * @property int|null $plot_id
+ * @property bool $active
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, LocksForUpdate, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -22,6 +30,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'plot_id',
+        'active',
     ];
 
     /**
@@ -44,6 +55,32 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => Role::class,
+            'plot_id' => 'integer',
+            'active' => 'boolean',
         ];
+    }
+
+    /**
+     * The plot a tenant belongs to. Board members and treasurers have none.
+     *
+     * @return BelongsTo<Plot, $this>
+     */
+    public function plot(): BelongsTo
+    {
+        return $this->belongsTo(Plot::class);
+    }
+
+    /**
+     * Readings this user recorded or reviewed, bills this user issued. Users
+     * with such a history stay in the system (locked), so the history keeps their name.
+     */
+    public function hasHistory(): bool
+    {
+        return Reading::query()
+            ->where('recorded_by', $this->getKey())
+            ->orWhere('flag_reviewed_by', $this->getKey())
+            ->exists()
+            || InvoiceDispatch::query()->where('sent_by', $this->getKey())->exists();
     }
 }

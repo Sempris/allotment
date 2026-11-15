@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\MeterType;
 use App\Enums\ReadingSource;
+use App\Enums\Role;
 use App\Models\Plot;
 use App\Models\Tariff;
 use App\Models\User;
@@ -24,6 +25,14 @@ class DatabaseSeeder extends Seeder
             'name' => 'Erika Gärtner',
             'email' => 'vorstand@example.org',
             'password' => Hash::make('gartenzwerg'),
+            'role' => Role::Board,
+        ]);
+
+        User::create([
+            'name' => 'Karl Kassner',
+            'email' => 'kasse@example.org',
+            'password' => Hash::make('gartenzwerg'),
+            'role' => Role::Treasurer,
         ]);
 
         $tenants = ['Familie Yilmaz', 'Hans Becker', 'Olga Petrenko', 'Familie Schulte', 'Mia Krüger', 'Jonas Weber', 'Familie Nowak', 'Sabine Lange'];
@@ -31,7 +40,23 @@ class DatabaseSeeder extends Seeder
         $profiles = [[38, 210], [22, 95], [51, 340], [30, 160], [18, 60], [44, 280], [27, 120], [35, 190]];
 
         foreach ($tenants as $i => $tenant) {
-            $plot = Plot::create(['number' => (string) ($i + 1), 'tenant_name' => $tenant]);
+            $plot = Plot::create([
+                'number' => (string) ($i + 1),
+                'tenant_name' => $tenant,
+                // Plots 2 and 6 have no address: their bills are handed over as printouts.
+                'tenant_email' => in_array($i + 1, [2, 6], true) ? null : sprintf('parzelle%d@example.org', $i + 1),
+            ]);
+
+            // Plot 3 has a tenant login that sees only this plot.
+            if ($plot->number === '3') {
+                User::create([
+                    'name' => $tenant,
+                    'email' => 'paechter@example.org',
+                    'password' => Hash::make('gartenzwerg'),
+                    'role' => Role::Tenant,
+                    'plot_id' => $plot->id,
+                ]);
+            }
             [$water, $power] = $profiles[$i];
 
             $meters = [

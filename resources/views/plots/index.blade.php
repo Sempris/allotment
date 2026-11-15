@@ -1,7 +1,7 @@
 <x-layout title="Parzellen">
     <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">Parzellen</h1>
-        <a href="{{ route('plots.create') }}" class="btn">Parzelle anlegen</a>
+        @can('manage-master-data')<a href="{{ route('plots.create') }}" class="btn">Parzelle anlegen</a>@endcan
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-stone-200 bg-white">
