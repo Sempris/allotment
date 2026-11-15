@@ -30,7 +30,7 @@ class UserAdministration
     public function update(User $user, array $data, User $actingUser): User
     {
         return DB::transaction(function () use ($user, $data, $actingUser) {
-            $user = User::query()->lockForUpdate()->findOrFail($user->getKey());
+            $user = User::findAndLock($user->getKey());
             $data = $this->withoutPlotUnlessTenant($data);
 
             if (! $data['active'] && $user->is($actingUser)) {
@@ -63,7 +63,7 @@ class UserAdministration
     public function delete(User $user, User $actingUser): void
     {
         DB::transaction(function () use ($user, $actingUser) {
-            $user = User::query()->lockForUpdate()->findOrFail($user->getKey());
+            $user = User::findAndLock($user->getKey());
 
             if ($user->is($actingUser)) {
                 throw new UserChangeRejected('user', 'Den eigenen Zugang können Sie nicht löschen.');

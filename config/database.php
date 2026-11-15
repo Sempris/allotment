@@ -38,10 +38,15 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
+            // SQLite has no row locks. Writers queue up for the database's write
+            // lock instead: a second writer waits up to busy_timeout (ms) rather
+            // than failing with "database is locked". The lock is taken at the
+            // start of a transaction by Model::findAndLock() (see LocksForUpdate);
+            // from PHP 8.4 on, IMMEDIATE additionally does so for every transaction.
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
             'journal_mode' => null,
             'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            'transaction_mode' => 'IMMEDIATE',
         ],
 
         'mysql' => [

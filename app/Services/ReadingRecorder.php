@@ -32,7 +32,8 @@ class ReadingRecorder
         return DB::transaction(function () use ($meter, $readOn, $valueMilli, $source, $user, $note) {
             // Lock the meter so two parallel entries (e.g. an import and a manual entry)
             // cannot both pass the "not lower than the previous value" check.
-            $meter = Meter::query()->lockForUpdate()->findOrFail($meter->getKey());
+            // The second one waits here and then sees the first one's reading.
+            $meter = Meter::findAndLock($meter->getKey());
 
             $result = $this->checker->check($meter, $readOn, $valueMilli);
 
@@ -60,7 +61,7 @@ class ReadingRecorder
     public function correct(Reading $original, Carbon $readOn, int $valueMilli, string $note, ?User $user = null): Reading
     {
         return DB::transaction(function () use ($original, $readOn, $valueMilli, $note, $user) {
-            $meter = Meter::query()->lockForUpdate()->findOrFail($original->meter_id);
+            $meter = Meter::findAndLock($original->meter_id);
             $original = Reading::query()->lockForUpdate()->findOrFail($original->getKey());
 
             if ($original->isSuperseded()) {

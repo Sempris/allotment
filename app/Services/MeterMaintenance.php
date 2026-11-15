@@ -33,7 +33,7 @@ class MeterMaintenance
     public function retire(Meter $meter, Carbon $date, ?int $finalValueMilli, ReadingSource $source, ?User $user = null): Meter
     {
         return DB::transaction(function () use ($meter, $date, $finalValueMilli, $source, $user) {
-            $meter = Meter::query()->lockForUpdate()->findOrFail($meter->getKey());
+            $meter = Meter::findAndLock($meter->getKey());
 
             if ($meter->removed_on !== null) {
                 throw new MeterChangeRejected('meter', ['Dieser Zähler ist bereits ausgebaut.']);
@@ -61,7 +61,7 @@ class MeterMaintenance
     public function reactivate(Meter $meter): Meter
     {
         return DB::transaction(function () use ($meter) {
-            $meter = Meter::query()->lockForUpdate()->findOrFail($meter->getKey());
+            $meter = Meter::findAndLock($meter->getKey());
 
             if ($meter->removed_on === null) {
                 throw new MeterChangeRejected('meter', ['Dieser Zähler ist nicht ausgebaut.']);
@@ -82,7 +82,7 @@ class MeterMaintenance
     public function update(Meter $meter, string $serialNumber, Carbon $installedOn, int $initialValueMilli): Meter
     {
         return DB::transaction(function () use ($meter, $serialNumber, $installedOn, $initialValueMilli) {
-            $meter = Meter::query()->lockForUpdate()->findOrFail($meter->getKey());
+            $meter = Meter::findAndLock($meter->getKey());
 
             /** @var Reading|null $first */
             $first = $meter->effectiveReadings()->first();
@@ -125,7 +125,7 @@ class MeterMaintenance
     public function delete(Meter $meter): void
     {
         DB::transaction(function () use ($meter) {
-            $meter = Meter::query()->lockForUpdate()->findOrFail($meter->getKey());
+            $meter = Meter::findAndLock($meter->getKey());
 
             if ($meter->readings()->exists()) {
                 throw new MeterChangeRejected('meter', [
