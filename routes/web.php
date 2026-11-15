@@ -43,4 +43,5 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/tariffs', [TariffController::class, 'index'])->name('tariffs.index');
     Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
+    Route::delete('/tariffs/{tariff}', [TariffController::class, 'destroy'])->name('tariffs.destroy');
 });
