@@ -64,6 +64,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('can:manage-billing')->group(function () {
         Route::post('/billing/key-date', [BillingPeriodController::class, 'store'])->name('billing.key-date.store');
         Route::delete('/billing/key-date', [BillingPeriodController::class, 'destroy'])->name('billing.key-date.destroy');
+        Route::post('/billing/{year}/invoices/send', [InvoiceController::class, 'sendAll'])->whereNumber('year')->name('invoices.send-all');
+        Route::post('/billing/{year}/plots/{plot}/invoice/send', [InvoiceController::class, 'send'])->whereNumber('year')->name('invoices.send');
+        Route::post('/billing/{year}/plots/{plot}/invoice/hand-over', [InvoiceController::class, 'handOver'])->whereNumber('year')->name('invoices.hand-over');
         Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
         Route::delete('/tariffs/{tariff}', [TariffController::class, 'destroy'])->name('tariffs.destroy');
     });

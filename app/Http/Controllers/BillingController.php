@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BillingPeriod;
+use App\Models\InvoiceDispatch;
 use App\Services\BillingLine;
 use App\Services\BillingService;
 use App\Support\Milli;
@@ -23,6 +24,8 @@ class BillingController extends Controller
             'year' => $year,
             'rows' => $this->billing->forYear($year),
             'missingTariffs' => $this->billing->missingTariffs($year),
+            // Latest dispatch per plot: who already got this year's bill, and for which amount.
+            'dispatches' => InvoiceDispatch::query()->where('year', $year)->orderBy('id')->get()->keyBy('plot_id'),
             'keyDate' => $keyDates[$year] ?? null,
             // Suggest the same day as last year when a key date is set for the first time.
             'suggestedKeyDate' => ($keyDates[$year] ?? ($keyDates[$year - 1] ?? null)?->copy()->addYear())?->toDateString(),

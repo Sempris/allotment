@@ -7,7 +7,10 @@
                 <label>Jahr <input type="number" name="year" value="{{ $year }}" min="2000" max="2100" class="input mt-0 w-24"></label>
                 <button class="btn-secondary">Anzeigen</button>
             </form>
-            <a class="btn" href="{{ route('billing.csv', ['year' => $year]) }}">CSV herunterladen</a>
+            <a class="btn-secondary" href="{{ route('billing.csv', ['year' => $year]) }}">CSV herunterladen</a>
+            @can('manage-billing')
+                <form method="POST" action="{{ route('invoices.send-all', ['year' => $year]) }}">@csrf<button class="btn" title="Sendet alle vollständigen, geprüften und noch nicht herausgegebenen Abrechnungen an die hinterlegten E-Mail-Adressen.">Alle offenen versenden</button></form>
+            @endcan
         </div>
     </div>
 
@@ -87,8 +90,34 @@
                         <td colspan="5" class="text-stone-500">Kein Zähler in diesem Abrechnungsjahr.</td>
                     </tr>
                 @else
+                    @php($dispatch = $dispatches->get($row['plot']->id))
+                    @php($invoice = ['year' => $year, 'plot' => $row['plot']])
                     <tr class="bg-stone-50">
-                        <td colspan="4" class="text-sm text-stone-500">{{ $row['complete'] ? 'Summe' : 'Summe (unvollständig)' }}</td>
+                        <td colspan="2" class="text-sm">
+                            @if (! $row['complete'])
+                                <span class="text-stone-500">Abrechnung unvollständig</span>
+                            @else
+                                <a class="link mr-3" href="{{ route('invoices.show', $invoice) }}">PDF</a>
+                                @if ($dispatch)
+                                    <span class="text-green-800">{{ $dispatch->wasHandedOver() ? 'übergeben' : 'versendet an '.$dispatch->recipient_email }} am {{ $dispatch->created_at->format('d.m.Y') }}</span>
+                                    @if ($dispatch->total_cents !== $row['total_cents'])
+                                        <span class="ml-2 text-amber-800">⚠ Betrag seit der Herausgabe geändert (war {{ Milli::formatCents($dispatch->total_cents) }})</span>
+                                    @endif
+                                @elseif ($row['open_reviews'] > 0)
+                                    <a class="text-amber-800 hover:underline" href="{{ route('dashboard') }}">⚠ Ablesung zur Prüfung markiert – erst danach versendbar</a>
+                                @endif
+                                @can('manage-billing')
+                                    @if ($row['open_reviews'] === 0 && (! $dispatch || $dispatch->total_cents !== $row['total_cents']))
+                                        @if ($row['plot']->tenant_email)
+                                            <form method="POST" action="{{ route('invoices.send', $invoice) }}" class="ml-2 inline">@csrf<button class="link">{{ $dispatch ? 'Erneut senden' : 'Per E-Mail senden' }}</button></form>
+                                        @else
+                                            <form method="POST" action="{{ route('invoices.hand-over', $invoice) }}" class="ml-2 inline">@csrf<button class="link">{{ $dispatch ? 'Erneut als übergeben markieren' : 'Ausgedruckt übergeben' }}</button></form>
+                                        @endif
+                                    @endif
+                                @endcan
+                            @endif
+                        </td>
+                        <td colspan="2" class="text-right text-sm text-stone-500">{{ $row['complete'] ? 'Summe' : 'Summe (unvollständig)' }}</td>
                         <td class="whitespace-nowrap text-right font-semibold">{{ Milli::formatCents($row['total_cents']) }}</td>
                     </tr>
                 @endif
