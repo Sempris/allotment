@@ -13,6 +13,21 @@
         @endcan
     </div>
 
+    @if ($issuedBills->isNotEmpty())
+        <section class="card mb-6">
+            <h2 class="mb-2 text-lg font-semibold">Jahresabrechnungen</h2>
+            <ul class="space-y-1 text-sm">
+                @foreach ($issuedBills as $bill)
+                    <li>
+                        <a class="link font-semibold" href="{{ route('invoices.show', ['year' => $bill->year, 'plot' => $plot]) }}">Abrechnung {{ $bill->year }} (PDF)</a>
+                        · {{ Milli::formatCents($bill->total_cents) }}
+                        · {{ $bill->wasHandedOver() ? 'übergeben' : 'versendet' }} am {{ $bill->created_at->format('d.m.Y') }}
+                    </li>
+                @endforeach
+            </ul>
+        </section>
+    @endif
+
     @forelse ($meters as $meter)
         <section class="card mb-6">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
