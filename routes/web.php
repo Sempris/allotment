@@ -6,6 +6,7 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BillingPeriodController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MeterController;
 use App\Http\Controllers\PlotController;
 use App\Http\Controllers\ReadingController;
@@ -57,6 +58,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     Route::get('/plots/{plot}', [PlotController::class, 'show'])->name('plots.show')->can('view-plot', 'plot');
+    Route::get('/billing/{year}/plots/{plot}/invoice', [InvoiceController::class, 'show'])
+        ->whereNumber('year')->name('invoices.show')->can('view-plot', 'plot');
 
     Route::middleware('can:manage-billing')->group(function () {
         Route::post('/billing/key-date', [BillingPeriodController::class, 'store'])->name('billing.key-date.store');
