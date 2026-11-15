@@ -35,6 +35,9 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 - **Prüfliste** auf der Übersicht: auffällige Werte bestätigen („Ist korrekt“) oder korrigieren.
 - **Korrekturen ohne Datenverlust:** Die ursprüngliche Ablesung bleibt durchgestrichen im Verlauf,
   die Korrektur braucht eine Begründung.
+- **Rollen und Benutzerverwaltung:** Vorstand, Kassierer/in und Pächter/in mit Lesezugang auf die
+  eigene Parzelle. Zugänge legt der Vorstand in der Oberfläche an; wer im Verlauf der Ablesungen
+  steht, wird gesperrt statt gelöscht, und der letzte Vorstand kann sich nicht aussperren.
 - **Jahresabrechnung** pro Parzelle mit Tarifen je Jahr (Preis je Einheit + Grundgebühr) und **CSV-Export** für Excel.
 - Übersicht, welche Zähler im laufenden Jahr **noch nicht abgelesen** sind.
 
@@ -53,10 +56,13 @@ npm install && npm run build
 php artisan serve
 ```
 
-Dann <http://localhost:8000> öffnen und anmelden mit
+Dann <http://localhost:8000> öffnen und anmelden. Alle Demo-Zugänge haben das Passwort `gartenzwerg`:
 
-- **E-Mail:** `vorstand@example.org`
-- **Passwort:** `gartenzwerg`
+| E-Mail | Rolle | darf |
+|--------|-------|------|
+| `vorstand@example.org` | Vorstand | alles: Stammdaten, Ablesungen, Abrechnung, Benutzer |
+| `kasse@example.org` | Kassierer/in | alles sehen, Tarife und Abrechnung pflegen, keine Zählerstände ändern |
+| `paechter@example.org` | Pächter/in (Parzelle 3) | nur die eigene Parzelle sehen |
 
 Die Demodaten enthalten acht Parzellen mit Ablesungen von 2023 bis 2026. Zwei Parzellen sind
 für 2026 noch nicht abgelesen, und Parzelle 7 hat 2026 einen auffällig hohen Wasserverbrauch
@@ -97,6 +103,11 @@ als der vorherige Stand“ gegen denselben alten Stand bestehen.
 blockiert nicht den ganzen Ablesetag; das Ergebnis zeigt pro Zeile, was importiert, markiert oder
 abgelehnt wurde und warum. Nur eine falsche Kopfzeile lehnt die ganze Datei ab.
 
+**Rechte heißen nach dem, was sie erlauben.** Routen und Views fragen nie „ist Vorstand?“, sondern
+`record-readings`, `manage-billing`, `view-plot` … Die Zuordnung Rolle → Recht steht an genau einer
+Stelle (`AppServiceProvider`) und ist als Matrix getestet. Die Kassiererin rechnet ab, ändert aber
+keine Zählerstände.
+
 **Bewusst einfach gehalten:** serverseitig gerendertes Blade mit Tailwind CSS, kein
 JavaScript-Framework. Für ein Werkzeug, das ein Vorstand einmal im Jahr intensiv nutzt, bringt eine
 SPA keinen Mehrwert, aber zusätzlichen Wartungsaufwand.
@@ -105,7 +116,7 @@ Aufbau im Überblick:
 
 ```
 app/
-├── Enums/              MeterType (Wasser/Strom, Einheit, Höchstwert), ReadingSource
+├── Enums/              MeterType (Wasser/Strom, Einheit, Höchstwert), ReadingSource, Role
 ├── Services/
 │   ├── ReadingRecorder.php        einziger Schreibweg für Ablesungen (+ Korrektur)
 │   ├── PlausibilityChecker.php    harte Regeln und Verbrauchswarnung
@@ -113,7 +124,8 @@ app/
 │   ├── MeterExchange.php          Zählertausch: Endstand + Ausbau + neuer Zähler in einer Transaktion
 │   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler
 │   ├── BillingService.php         Jahresabrechnung je Parzelle
-│   └── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
+│   ├── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
+│   └── UserAdministration.php     Zugänge anlegen, sperren, löschen – ohne den Verein auszusperren
 ├── Support/Milli.php   Zählerstände und Geld ohne Floats
 └── Http/               schlanke Controller, Validierung in Form Requests
 ```
@@ -126,7 +138,8 @@ app/
   CSV-Export und Zugriffsschutz.
 - **Fachliche Testfälle statt Zufallsdaten:** Die Tests rechnen konkrete Beispiele nach
   (z. B. 38,255 m³ × 2,80 € = 107,11 €), damit ein Fehler in der Rundung sofort auffällt.
-- **Sicherheit:** alle Seiten nur nach Anmeldung, Login mit Rate-Limit (5 Versuche pro Minute),
+- **Sicherheit:** alle Seiten nur nach Anmeldung, Rechte je Rolle in den Routen durchgesetzt
+  (nicht nur ausgeblendete Links) und als Matrix getestet, Login mit Rate-Limit (5 Versuche pro Minute),
   CSRF-Schutz in allen Formularen, Validierung jeder Eingabe in Form Requests, Upload auf
   CSV/TXT bis 1 MB begrenzt, Ausgabe in Blade escaped.
 - **Manuell geprüft:** alle Seiten mit den Demodaten im Browser durchgegangen, inklusive Import der Beispieldatei.
@@ -147,8 +160,9 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 
 ## Bekannte Grenzen
 
-- **Eine Rolle:** Alle Benutzer sind Vorstand. Es gibt kein Rechtekonzept und keinen Zugang für
-  Pächterinnen und Pächter; Benutzer werden per Seeder bzw. `php artisan tinker` angelegt.
+- **Feste Rollen, ein Pächterzugang je Parzelle:** Die drei Rollen sind im Code festgelegt, nicht
+  konfigurierbar. Es gibt kein „Passwort vergessen“ per E-Mail (der Vorstand setzt ein neues
+  Startpasswort) und keine Zwei-Faktor-Anmeldung.
 - **Jahresverbrauch als Differenz der Ablesungen:** Die Abrechnung nimmt die letzte Ablesung im
   Jahr minus die letzte Ablesung davor. Das passt zum üblichen festen Ablesetag; bei sehr
   unterschiedlichen Ablesedaten wäre eine Interpolation auf einen Stichtag genauer.
@@ -164,4 +178,3 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 - PDF-Rechnung pro Parzelle und Versand an die hinterlegte E-Mail-Adresse
 - Ablesung per Smartphone direkt an der Parzelle (die Formulare sind bereits responsiv)
 - Foto des Zählers zur Ablesung speichern, als Beleg bei Rückfragen
-- Rollen: Vorstand, Kassierer, Pächter mit Lesezugriff auf die eigene Parzelle

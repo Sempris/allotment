@@ -16,7 +16,7 @@ Annahmen, lieber ablehnen oder markieren als raten.
 
 ```bash
 composer install && npm install        # Abhängigkeiten
-php artisan migrate:fresh --seed       # Demodaten (Login: vorstand@example.org / gartenzwerg)
+php artisan migrate:fresh --seed       # Demodaten (vorstand@ / kasse@ / paechter@example.org, Passwort gartenzwerg)
 php artisan test                       # gesamte Testsuite (SQLite im Speicher)
 php artisan test --filter=BillingTest  # einzelne Testklasse
 vendor/bin/pint --dirty                # Codestil für geänderte Dateien
@@ -42,6 +42,12 @@ npm run build                          # Tailwind/Vite-Build
    daran hängt (Parzelle ohne Zähler, Zähler ohne Ablesungen).
 7. **Ein ausgebauter Zähler hat einen Endstand.** `removed_on` wird nur von
    `MeterMaintenance::retire()` gesetzt; am Ausbautag gibt es eine wirksame Ablesung, danach keine.
+8. **Rechte werden in den Routen durchgesetzt.** Jede Route liegt in einer `can:`-Gruppe mit einem
+   benannten Gate aus `AppServiceProvider::defineAbilities()`. Code fragt nie nach der Rolle,
+   sondern nach dem Recht. Eine neue Route ohne Gate ist ein Fehler; dazu gehört ein Test, der
+   den Zugriff für eine nicht berechtigte Rolle mit 403 belegt.
+9. **Wer im Verlauf steht, verschwindet nicht.** Benutzer mit erfassten oder geprüften Ablesungen
+   werden gesperrt, nicht gelöscht. Es gibt immer mindestens einen aktiven Vorstand.
 
 ## Konventionen
 
@@ -87,10 +93,11 @@ Commit-Nachrichten: deutsch, Imperativ-frei beschreibend, mit Bereich vorweg, z.
 ## Orientierung im Code
 
 ```
-app/Enums/        MeterType, ReadingSource
+app/Enums/        MeterType, ReadingSource, Role
 app/Services/     ReadingRecorder (Schreibweg), PlausibilityChecker, ConsumptionCalculator,
                   BillingService, ReadingCsvImporter, MeterMaintenance (einzige Stelle, die
-                  Zähler ändert/ausbaut/löscht), MeterExchange
+                  Zähler ändert/ausbaut/löscht), MeterExchange, UserAdministration
+app/Providers/    AppServiceProvider: Zuordnung Rolle → Recht (Gates)
 app/Support/      Milli (Einlesen/Ausgabe von Ständen und Beträgen)
 app/Http/         Controller + Form Requests
 docs/plaene/      Pläne je Aufgabe, in der Reihenfolge der Umsetzung

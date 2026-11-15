@@ -80,3 +80,16 @@ ein neues.
 - Selbstregistrierung, E-Mail-Verifizierung, „Passwort vergessen“.
 - Mehrere Parzellen pro Pächterzugang.
 - Zwei-Faktor-Anmeldung.
+
+## Ergebnis
+
+Umgesetzt wie geplant. Anmerkungen:
+
+- Die Schutzregeln der Benutzerverwaltung liegen in einem Service (`UserAdministration`) statt
+  im Form Request, weil „letzter aktiver Vorstand“ eine Abfrage unter Sperre braucht und für
+  Ändern und Löschen gleichermaßen gilt.
+- Ein gesperrter Vorstand zählt nicht als „weiterer Vorstand“; das stand so nicht im Plan und
+  hat einen eigenen Test bekommen.
+- Zusätzlich entstanden: eigene 403-Seite auf Deutsch (Pächter ohne zugeordnete Parzelle bekommen
+  eine Erklärung statt „Forbidden“).
+- Offen geblieben und ins README übernommen: kein „Passwort vergessen“ per E-Mail.
