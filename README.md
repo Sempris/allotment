@@ -212,6 +212,20 @@ Commits. Die zweite Runde – der Abbau der damaligen „Bekannten Grenzen“ �
 
 ## Bekannte Grenzen
 
+Die sechs Grenzen der ersten Fassung sind abgebaut; zu jeder gibt es einen Plan mit Entscheidungen
+und Ergebnis:
+
+| Frühere Grenze | Jetzt | Plan |
+|----------------|-------|------|
+| Zählertausch: Endstand nur als Hinweis | Endstand ist Pflicht, Tausch in einer Transaktion | [01](docs/plaene/01-zaehlertausch-endstand.md) |
+| Keine Bearbeitung/Löschung von Stammdaten | Bearbeiten, Ausbauen, Löschen – geprüft gegen die Historie | [02](docs/plaene/02-stammdaten-bearbeiten.md) |
+| Eine Rolle, Benutzer per Seeder | Drei Rollen, Benutzerverwaltung, Pächterzugang | [03](docs/plaene/03-rollen-und-benutzer.md) |
+| Jahresverbrauch nur als Differenz | Wahlweise Umrechnung auf einen Stichtag | [04](docs/plaene/04-stichtagsabrechnung.md) |
+| Nur CSV-Export | PDF-Abrechnung, E-Mail-Versand, Versandprotokoll | [05](docs/plaene/05-pdf-rechnung-und-versand.md) |
+| Sperre wirkt nur mit MySQL/PostgreSQL | Sperre wirkt auf allen drei Datenbanken, per Paralleltest belegt | [06](docs/plaene/06-datenbanken-und-sperren.md) |
+
+Was weiterhin bewusst nicht gelöst ist:
+
 - **Feste Rollen, ein Pächterzugang je Parzelle:** Die drei Rollen sind im Code festgelegt, nicht
   konfigurierbar. Es gibt kein „Passwort vergessen“ per E-Mail (der Vorstand setzt ein neues
   Startpasswort) und keine Zwei-Faktor-Anmeldung.

@@ -21,6 +21,10 @@ Ausgangspunkt sind die sechs Punkte aus dem README-Abschnitt „Bekannte Grenzen
 Die Pläne 02–06 werden jeweils direkt vor ihrer Umsetzung geschrieben, nicht alle vorab: Was in
 einem Schritt gelernt wird, soll in den nächsten Plan einfließen können.
 
+**Stand:** Alle sechs Pläne sind umgesetzt; jeder endet mit einem Abschnitt „Ergebnis“. Bei Plan 06
+ging dem Plan eine Messung voraus (Verhalten der Datenbanken bei parallelen Eingaben), weil ohne
+sie nicht klar war, was überhaupt zu beheben ist – das steht dort unter „Ausgangslage“.
+
 ## Aufbau eines Plans
 
 - **Ausgangslage** – was heute passiert und warum das ein Problem ist
