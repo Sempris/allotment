@@ -86,6 +86,13 @@ class ConsumptionCalculator
         /** @var Reading|null $last */
         $last = $readings->filter(fn (Reading $r) => $r->read_on->between($yearStart, $yearEnd))->last();
 
+        // A meter removed late in the previous calendar year, but after that year's
+        // key date, still has consumption to bill: up to its final reading.
+        if ($last === null && $meter->removed_on !== null
+            && $meter->removed_on->gt($this->periodEnd($year - 1, $keyDates)) && $meter->removed_on->lte($yearEnd)) {
+            $last = $readings->last();
+        }
+
         return $last === null ? null : new MeterValue($last->value_milli, $last->read_on, MeterValue::READING);
     }
 

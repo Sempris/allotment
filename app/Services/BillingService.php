@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Enums\MeterType;
+use App\Models\BillingPeriod;
 use App\Models\Plot;
 use App\Models\Tariff;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class BillingService
@@ -18,28 +18,35 @@ class BillingService
     public function forYear(int $year): Collection
     {
         $tariffs = Tariff::query()->where('year', $year)->get()->keyBy(fn (Tariff $t) => $t->meter_type->value);
-        $yearStart = Carbon::create($year, 1, 1);
-        $yearEnd = Carbon::create($year, 12, 31);
+        $keyDates = BillingPeriod::keyDates();
+
+        // A meter belongs to the year if it was in service at some point between
+        // the end of the previous billing year and the end of this one.
+        $periodEnd = $this->calculator->periodEnd($year, $keyDates);
+        $previousPeriodEnd = $this->calculator->periodEnd($year - 1, $keyDates);
 
         return Plot::query()
             ->with(['meters' => fn ($q) => $q
-                ->whereDate('installed_on', '<=', $yearEnd)
-                ->where(fn ($q) => $q->whereNull('removed_on')->orWhereDate('removed_on', '>=', $yearStart))
+                ->whereDate('installed_on', '<=', $periodEnd)
+                ->where(fn ($q) => $q->whereNull('removed_on')->orWhereDate('removed_on', '>', $previousPeriodEnd))
                 ->with('effectiveReadings'),
             ])
-            ->orderBy('number')
             ->get()
-            ->map(function (Plot $plot) use ($year, $tariffs) {
+            ->sortBy('number', SORT_NATURAL)
+            ->values()
+            ->map(function (Plot $plot) use ($year, $tariffs, $keyDates) {
                 $lines = [];
 
                 foreach ($plot->meters->sortBy(fn ($m) => [$m->type->sortOrder(), $m->id]) as $meter) {
-                    $consumption = $this->calculator->forYear($meter, $year);
+                    $period = $this->calculator->periodForYear($meter, $year, $keyDates);
+                    $consumption = $period?->consumptionMilli();
                     $tariff = $tariffs->get($meter->type->value);
 
                     $lines[] = new BillingLine(
                         $meter,
                         $consumption,
                         $consumption !== null && $tariff !== null ? $this->cost($consumption, $tariff) : null,
+                        $period,
                     );
                 }
 
