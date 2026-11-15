@@ -19,6 +19,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');
 });
 
+// Billing years in URLs are four digits from 2000 to 2099; anything else is a 404, not an error.
 // Every group below names the ability it needs (see AppServiceProvider::defineAbilities).
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
@@ -59,14 +60,14 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/plots/{plot}', [PlotController::class, 'show'])->name('plots.show')->can('view-plot', 'plot');
     Route::get('/billing/{year}/plots/{plot}/invoice', [InvoiceController::class, 'show'])
-        ->whereNumber('year')->name('invoices.show')->can('view-plot', 'plot');
+        ->where('year', '20[0-9]{2}')->name('invoices.show')->can('view-plot', 'plot');
 
     Route::middleware('can:manage-billing')->group(function () {
         Route::post('/billing/key-date', [BillingPeriodController::class, 'store'])->name('billing.key-date.store');
         Route::delete('/billing/key-date', [BillingPeriodController::class, 'destroy'])->name('billing.key-date.destroy');
-        Route::post('/billing/{year}/invoices/send', [InvoiceController::class, 'sendAll'])->whereNumber('year')->name('invoices.send-all');
-        Route::post('/billing/{year}/plots/{plot}/invoice/send', [InvoiceController::class, 'send'])->whereNumber('year')->name('invoices.send');
-        Route::post('/billing/{year}/plots/{plot}/invoice/hand-over', [InvoiceController::class, 'handOver'])->whereNumber('year')->name('invoices.hand-over');
+        Route::post('/billing/{year}/invoices/send', [InvoiceController::class, 'sendAll'])->where('year', '20[0-9]{2}')->name('invoices.send-all');
+        Route::post('/billing/{year}/plots/{plot}/invoice/send', [InvoiceController::class, 'send'])->where('year', '20[0-9]{2}')->name('invoices.send');
+        Route::post('/billing/{year}/plots/{plot}/invoice/hand-over', [InvoiceController::class, 'handOver'])->where('year', '20[0-9]{2}')->name('invoices.hand-over');
         Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
         Route::delete('/tariffs/{tariff}', [TariffController::class, 'destroy'])->name('tariffs.destroy');
     });

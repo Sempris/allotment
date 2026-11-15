@@ -106,4 +106,12 @@ class InvoicePdfTest extends TestCase
             ->get(route('invoices.show', ['year' => 2026, 'plot' => $this->plot]))
             ->assertForbidden();
     }
+
+    public function test_a_nonsense_year_in_the_address_is_simply_not_found(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->get("/billing/999999999/plots/{$this->plot->id}/invoice")->assertNotFound();
+        $this->post('/billing/1/invoices/send')->assertNotFound();
+    }
 }
