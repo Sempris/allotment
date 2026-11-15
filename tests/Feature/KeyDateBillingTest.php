@@ -100,4 +100,32 @@ class KeyDateBillingTest extends TestCase
 
         $this->assertSame(['2', '4', '10'], app(BillingService::class)->forYear(2026)->map(fn ($row) => $row['plot']->number)->all());
     }
+
+    public function test_a_single_plot_gets_the_same_bill_as_in_the_yearly_list(): void
+    {
+        $this->meter(['2025-10-17' => 56_500, '2026-10-17' => 93_000]);
+        Plot::factory()->create(['number' => '5']);
+
+        $single = app(BillingService::class)->forPlot($this->plot, 2026);
+        $fromList = app(BillingService::class)->forYear(2026)->firstWhere('plot.id', $this->plot->id);
+
+        $this->assertSame(11_420, $single['total_cents']); // 36.500 m³ × 2.80 € + 12.00 €
+        $this->assertSame($fromList['total_cents'], $single['total_cents']);
+        $this->assertTrue($single['complete']);
+        $this->assertSame(10_220, $single['lines'][0]->consumptionCostCents());
+        $this->assertSame(280, $single['lines'][0]->tariff->price_per_unit_cents);
+    }
+
+    public function test_readings_awaiting_review_are_counted_on_the_bill(): void
+    {
+        // 400 m³ in the first season is far above the plausible maximum, so the reading gets flagged.
+        $meter = $this->meter(['2026-10-17' => 400_000], installedOn: '2026-04-01');
+
+        $bill = app(BillingService::class)->forPlot($this->plot, 2026);
+        $this->assertSame(1, $bill['open_reviews']);
+        $this->assertTrue($bill['complete']);
+
+        $meter->readings()->sole()->forceFill(['flag_reviewed_at' => now()])->save();
+        $this->assertSame(0, app(BillingService::class)->forPlot($this->plot->fresh(), 2026)['open_reviews']);
+    }
 }
