@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
@@ -19,6 +20,8 @@ Route::middleware('guest')->group(function () {
 // Every group below names the ability it needs (see AppServiceProvider::defineAbilities).
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+    Route::get('/password', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/password', [PasswordController::class, 'update'])->name('password.update');
 
     // Start page: overview for board and treasurer, the own plot for tenants.
     Route::get('/', DashboardController::class)->name('dashboard');

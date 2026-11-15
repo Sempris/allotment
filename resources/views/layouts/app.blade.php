@@ -30,7 +30,8 @@
                 @cannot('view-club')
                     <a href="{{ route('dashboard') }}" class="font-semibold text-green-800">Meine Parzelle</a>
                 @endcannot
-                <form method="POST" action="{{ route('logout') }}" class="ml-auto">
+                <a href="{{ route('password.edit') }}" @class(['ml-auto text-stone-500 hover:text-stone-800', 'font-semibold' => request()->routeIs('password.*')])>Passwort</a>
+                <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="text-stone-500 hover:text-stone-800">Abmelden ({{ auth()->user()->name }} · {{ auth()->user()->role->label() }})</button>
                 </form>
