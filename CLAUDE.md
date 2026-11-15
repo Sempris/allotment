@@ -19,6 +19,7 @@ composer install && npm install        # Abhängigkeiten
 php artisan migrate:fresh --seed       # Demodaten (vorstand@ / kasse@ / paechter@example.org, Passwort gartenzwerg)
 php artisan test                       # gesamte Testsuite (SQLite im Speicher)
 php artisan test --filter=BillingTest  # einzelne Testklasse
+DB_CONNECTION=pgsql DB_HOST=… DB_DATABASE=… php artisan test   # Suite gegen PostgreSQL/MySQL
 vendor/bin/pint --dirty                # Codestil für geänderte Dateien
 npm run build                          # Tailwind/Vite-Build
 ```
@@ -66,7 +67,10 @@ npm run build                          # Tailwind/Vite-Build
   `.card`, `.input`, `.table`, `.link`). Kein JavaScript-Framework, kein Inline-Skript.
 - **Datenbank:** Schema-Änderungen nur über neue Migrationen; bestehende Migrationen nicht
   umschreiben. Abfragen müssen auf SQLite, MySQL und PostgreSQL laufen (keine DB-spezifischen
-  Funktionen; Sortierung nach Parzellennummer in PHP mit `SORT_NATURAL`).
+  Funktionen; Sortierung nach Parzellennummer in PHP mit `SORT_NATURAL`). Die CI testet alle drei.
+- **Sperren:** Wer in einer Transaktion erst prüft und dann schreibt, sperrt zuerst mit
+  `Model::findAndLock()` (Trait `LocksForUpdate`) – als **erste** Anweisung der Transaktion. Ein
+  nacktes `lockForUpdate()` wirkt auf SQLite nicht. Abgesichert durch `ConcurrentReadingsTest`.
 - **Tests:** Jede fachliche Regel bekommt einen Test mit konkreten, nachgerechneten Zahlen
   (z. B. 38,255 m³ × 2,80 € = 107,11 €), kein „irgendwas wurde gespeichert“. Feature-Tests gehen
   über HTTP, wenn die Regel den Benutzer betrifft. Zeit wird mit `Carbon::setTestNow()` fixiert.

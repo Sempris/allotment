@@ -63,3 +63,37 @@ Umstellung auf MySQL/PostgreSQL.
 
 - Lasttests oder mehr als zwei gleichzeitige Schreiber.
 - Betriebsthemen (Backups, Replikation).
+
+## Ergebnis
+
+**Die geplante SQLite-Lösung hat nicht funktioniert.** `transaction_mode = IMMEDIATE` änderte am
+Paralleltest nichts: Laravel wendet die Einstellung erst ab PHP 8.4 an
+(`SQLiteConnection::executeBeginTransactionStatement()`); auf PHP 8.3 – lokal und in der CI –
+beginnt weiterhin eine verzögerte Transaktion. Die zweite Eingabe liest zuerst, will dann
+schreiben und scheitert sofort mit „database is locked“, unabhängig vom `busy_timeout`.
+
+Stattdessen:
+
+- **`Model::findAndLock()`** (Trait `LocksForUpdate`) ersetzt die verstreuten
+  `lockForUpdate()->findOrFail()`. Auf MySQL/PostgreSQL bleibt es die Zeilensperre. Auf SQLite
+  führt es als erste Anweisung der Transaktion ein wirkungsloses `UPDATE` aus; damit hält die
+  Transaktion die Schreibsperre, bevor sie liest, und die zweite wartet (`busy_timeout`, 5 s).
+- `transaction_mode = IMMEDIATE` bleibt gesetzt (schadet nicht, wirkt ab PHP 8.4 zusätzlich).
+- Gilt für alle Stellen, die erst prüfen und dann schreiben: `ReadingRecorder`,
+  `MeterMaintenance`, `UserAdministration`.
+
+Ergebnis des Paralleltests (beide Startreihenfolgen):
+
+| Datenbank | vorher | nachher |
+|-----------|--------|---------|
+| SQLite | „database is locked“ | eine gespeichert, eine abgelehnt ✓ |
+| PostgreSQL 16 | ✓ | ✓ (ohne Sperre: beide gespeichert ✗) |
+| MySQL 8.4 | ungeprüft | ✓ in der CI |
+
+Die gesamte Suite (151 Tests) läuft in der CI gegen alle drei Datenbanken grün. Auf MySQL und
+PostgreSQL musste am Anwendungscode nichts geändert werden – die Konvention „keine
+datenbankspezifischen Funktionen“ aus der ersten Runde hat gehalten. Ein Test (Demodaten)
+verließ sich auf die Reihenfolge ohne `ORDER BY` und sortiert jetzt ausdrücklich.
+
+Neue Konvention in `CLAUDE.md`: Sperren nur über `findAndLock()`, als erste Anweisung der
+Transaktion.

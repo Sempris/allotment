@@ -51,7 +51,8 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 
 ## Schnellstart
 
-Voraussetzungen: PHP 8.2+, Composer, Node.js 20+, SQLite.
+Voraussetzungen: PHP 8.2+, Composer, Node.js 20+. Als Datenbank genügt SQLite (Vorgabe); MySQL und
+PostgreSQL werden ebenfalls unterstützt und in der CI mitgetestet (`DB_CONNECTION` in `.env`).
 
 ```bash
 git clone <repo-url> zaehlerstand && cd zaehlerstand
@@ -114,9 +115,12 @@ hochgerechneter Wert – und damit eine verschickte Abrechnung – mit der näch
 alte darauf (`superseded_by_id`). Berechnungen nutzen nur die „wirksamen“ Ablesungen
 (`effectiveReadings`). So bleibt nachvollziehbar, was geändert wurde, von wem und warum.
 
-**Sperre gegen parallele Eingaben.** Beim Speichern wird der Zähler mit `lockForUpdate()` gesperrt,
+**Sperre gegen parallele Eingaben – auf jeder Datenbank.** Beim Speichern wird der Zähler gesperrt,
 damit zwei gleichzeitige Eingaben (z. B. Import und Formular) nicht beide die Prüfung „nicht kleiner
-als der vorherige Stand“ gegen denselben alten Stand bestehen.
+als der vorherige Stand“ gegen denselben alten Stand bestehen. MySQL und PostgreSQL sperren die
+Zeile (`SELECT … FOR UPDATE`). SQLite kennt keine Zeilensperren; dort nimmt `Model::findAndLock()`
+als erste Anweisung der Transaktion die Schreibsperre der Datenbank. Ein Test mit zwei echten
+Prozessen belegt das auf allen drei Datenbanken – und schlägt fehl, wenn man die Sperre entfernt.
 
 **CSV-Import zeilenweise.** Jede Zeile wird einzeln geprüft und gespeichert. Eine fehlerhafte Zeile
 blockiert nicht den ganzen Ablesetag; das Ergebnis zeigt pro Zeile, was importiert, markiert oder
@@ -157,6 +161,8 @@ app/
 
 ## Qualitätssicherung
 
+- **Drei Datenbanken in der CI:** Die gesamte Suite läuft bei jedem Push gegen SQLite, MySQL 8.4 und
+  PostgreSQL 16, einschließlich eines Paralleltests mit zwei echten Prozessen.
 - **Automatisierte Tests** (PHPUnit, `php artisan test`): Einlesen von Zahlen, alle Plausibilitätsregeln,
   Erfassen, Ablehnen und Korrigieren über HTTP, Zählertausch, Prüfliste, CSV-Import mit gemischten
   Zeilen, Verbrauchs- und Kostenberechnung bis auf den Cent, Stichtagsumrechnung mit von Hand
@@ -173,17 +179,36 @@ app/
 
 ## Eingesetzte KI-Werkzeuge und Vorgehen
 
-Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein Vorgehen:
+Die Anwendung ist mit **Claude Code (Anthropic) als Coding-Agent** entstanden. Wie der Agent
+gesteuert wird, steht im Repository und lässt sich an der Git-Historie nachvollziehen:
 
-1. **Fachlich vorgeben, nicht nur „bau mir eine App“:** Zuerst habe ich die Domäne und die
-   Regeln festgelegt (harte Fehler vs. Warnungen, Korrektur ohne Überschreiben, ganzzahlige
-   Beträge, ein Schreibweg für alle Eingaben). Viele davon kenne ich aus meiner Arbeit an einer
-   ESG-Plattform, wo jede Kennzahl für die Prüfung nachvollziehbar sein muss.
-2. **In kleinen Schritten umsetzen lassen:** Datenmodell → Services → HTTP-Schicht → Oberfläche → Tests.
-3. **Ergebnisse kritisch prüfen:** Jeder Schritt wurde gelesen und gegen die Regeln geprüft,
-   bevor der nächste kam. Die Tests rechnen Beispiele mit festen Zahlen nach, statt nur zu prüfen,
-   dass „etwas“ gespeichert wurde.
-4. **Bewusst entscheiden, was nicht gebaut wird:** siehe „Bekannte Grenzen“.
+- **[`CLAUDE.md`](CLAUDE.md) – der Agent-Kontext.** Fachliche Invarianten (ein Schreibweg für
+  Ablesungen, keine Floats, nichts schätzen ohne Kennzeichnung …), Konventionen, Arbeitsweise und
+  was der Agent nicht ohne Rückfrage ändern darf. Die Datei wächst mit: Jede neue Regel kommt im
+  selben Zug wie der Code, der sie braucht (aktuell elf Invarianten).
+- **[`docs/plaene/`](docs/plaene/README.md) – ein Plan je Aufgabe, vor dem Code.** Ausgangslage,
+  Entscheidungen mit verworfenen Alternativen, Schritte, Testfälle mit Zahlen, Nicht-Ziele. Am Ende
+  jedes Plans steht unter „Ergebnis“, was bei der Umsetzung anders lief als gedacht – z. B. dass
+  ein nach dem Stichtag ausgebauter Zähler sonst nie abgerechnet worden wäre (Plan 04) oder dass
+  SQLites `IMMEDIATE`-Modus in Laravel erst ab PHP 8.4 greift (Plan 06).
+- **Git-Historie in Planschritten.** Erst der Plan, dann je Schritt ein Commit mit Tests
+  (Service → HTTP/Oberfläche → Doku), jeder für sich grün.
+
+Mein Anteil dabei:
+
+1. **Fachlich vorgeben, nicht nur „bau mir eine App“:** Domäne und Regeln festlegen (harte Fehler
+   vs. Warnungen, Korrektur ohne Überschreiben, ganzzahlige Beträge, ein Schreibweg für alle
+   Eingaben). Viele davon kenne ich aus meiner Arbeit an einer ESG-Plattform, wo jede Kennzahl für
+   die Prüfung nachvollziehbar sein muss.
+2. **In kleinen Schritten umsetzen lassen** und jeden Schritt gegen Plan und Invarianten prüfen,
+   bevor der nächste kommt.
+3. **Ergebnisse nachrechnen:** Die Tests rechnen Beispiele mit festen Zahlen nach, statt nur zu
+   prüfen, dass „etwas“ gespeichert wurde; Oberfläche und PDF werden zusätzlich im Browser angesehen.
+4. **Bewusst entscheiden, was nicht gebaut wird:** siehe „Bekannte Grenzen“ und die Nicht-Ziele
+   der Pläne.
+
+Die erste Fassung (bis Commit `e978597`) entstand noch ohne diesen Rahmen, in wenigen großen
+Commits. Die zweite Runde – der Abbau der damaligen „Bekannten Grenzen“ – folgt ihm durchgehend.
 
 ## Bekannte Grenzen
 
@@ -201,8 +226,10 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 - **PDF wird nicht archiviert:** Die Abrechnung entsteht bei jedem Abruf aus den aktuellen Daten.
   Das Versandprotokoll merkt sich den herausgegebenen Betrag und warnt bei Abweichungen, speichert
   aber nicht das Dokument. Zahlungseingänge und Mahnungen werden nicht verfolgt.
-- **SQLite** reicht für einen Verein. Die Sperre mit `lockForUpdate()` wirkt erst mit MySQL oder
-  PostgreSQL wirklich; SQLite sperrt ohnehin die ganze Datenbank beim Schreiben.
+- **Zwei gleichzeitige Schreiber sind geprüft, mehr nicht:** Der Paralleltest lässt zwei Eingaben
+  gegeneinander laufen. Lasttests gibt es nicht; für einen Verein mit einer Handvoll Benutzern ist
+  das angemessen. Auf SQLite warten gleichzeitige Schreiber aufeinander (ganze Datenbank), auf MySQL
+  und PostgreSQL nur die, die denselben Zähler betreffen.
 
 ## Mögliche nächste Schritte
 
