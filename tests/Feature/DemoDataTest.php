@@ -39,6 +39,6 @@ class DemoDataTest extends TestCase
         $this->assertSame(1, Reading::query()->awaitingReview()->count());
 
         // Plots 2 and 6 get their bill as a printout.
-        $this->assertSame(['2', '6'], Plot::whereNull('tenant_email')->pluck('number')->all());
+        $this->assertSame(['2', '6'], Plot::whereNull('tenant_email')->orderBy('id')->pluck('number')->all());
     }
 }

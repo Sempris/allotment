@@ -6,14 +6,51 @@ on:
 
 jobs:
   tests:
+    name: tests (${{ matrix.database }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - database: sqlite
+            db_name: ':memory:'
+          - database: mysql
+            db_name: zaehlerstand_test
+            db_port: 3306
+            db_user: root
+          - database: pgsql
+            db_name: zaehlerstand_test
+            db_port: 5432
+            db_user: postgres
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: zaehlerstand_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -psecret"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: zaehlerstand_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo_sqlite, intl
+          extensions: pdo_sqlite, pdo_mysql, pdo_pgsql, intl, gd
 
       - uses: actions/setup-node@v4
         with:
@@ -22,4 +59,14 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - run: npm ci && npm run build
       - run: cp .env.example .env && php artisan key:generate
+
+      # phpunit.xml only sets defaults; these variables decide which database the suite uses.
+      # The suite includes ConcurrentReadingsTest, which lets two processes race on that database.
       - run: php artisan test
+        env:
+          DB_CONNECTION: ${{ matrix.database }}
+          DB_HOST: 127.0.0.1
+          DB_PORT: ${{ matrix.db_port }}
+          DB_DATABASE: ${{ matrix.db_name }}
+          DB_USERNAME: ${{ matrix.db_user }}
+          DB_PASSWORD: secret
