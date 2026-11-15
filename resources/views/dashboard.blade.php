@@ -24,8 +24,10 @@
                             <td class="whitespace-nowrap">{{ \App\Support\Milli::format($reading->value_milli) }} {{ $reading->meter->type->unit() }}</td>
                             <td class="text-amber-800">{{ $reading->flag_reason }}</td>
                             <td class="whitespace-nowrap text-right">
-                                <a class="link mr-3" href="{{ route('readings.correct', $reading) }}">Korrigieren</a>
-                                <form method="POST" action="{{ route('readings.review', $reading) }}" class="inline">@csrf<button class="link">Ist korrekt</button></form>
+                                @can('record-readings')
+                                    <a class="link mr-3" href="{{ route('readings.correct', $reading) }}">Korrigieren</a>
+                                    <form method="POST" action="{{ route('readings.review', $reading) }}" class="inline">@csrf<button class="link">Ist korrekt</button></form>
+                                @endcan
                             </td>
                         </tr>
                     @endforeach
@@ -44,7 +46,7 @@
                 @foreach ($missing as $meter)
                     <li class="card flex items-center justify-between text-sm">
                         <span>Parzelle {{ $meter->plot->number }} · {{ $meter->type->label() }} {{ $meter->serial_number }}</span>
-                        <a class="link" href="{{ route('readings.create', $meter) }}">Erfassen</a>
+                        @can('record-readings')<a class="link" href="{{ route('readings.create', $meter) }}">Erfassen</a>@endcan
                     </li>
                 @endforeach
             </ul>

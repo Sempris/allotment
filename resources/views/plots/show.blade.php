@@ -5,10 +5,12 @@
             <h1 class="text-2xl font-semibold">Parzelle {{ $plot->number }}</h1>
             <p class="text-sm text-stone-500">{{ $plot->tenant_name }}@if ($plot->tenant_email) · {{ $plot->tenant_email }}@endif</p>
         </div>
-        <div class="flex items-center gap-4">
-            <a href="{{ route('plots.edit', $plot) }}" class="link text-sm">Parzelle bearbeiten</a>
-            <a href="{{ route('meters.create', $plot) }}" class="btn">Zähler anlegen / tauschen</a>
-        </div>
+        @can('manage-master-data')
+            <div class="flex items-center gap-4">
+                <a href="{{ route('plots.edit', $plot) }}" class="link text-sm">Parzelle bearbeiten</a>
+                <a href="{{ route('meters.create', $plot) }}" class="btn">Zähler anlegen / tauschen</a>
+            </div>
+        @endcan
     </div>
 
     @forelse ($meters as $meter)
@@ -19,10 +21,12 @@
                     @if ($meter->removed_on)<span class="ml-2 rounded bg-stone-200 px-2 py-0.5 text-xs font-normal">ausgebaut am {{ $meter->removed_on->format('d.m.Y') }}</span>@endif
                 </h2>
                 <div class="flex items-center gap-3">
-                    <a class="link text-sm" href="{{ route('meters.edit', $meter) }}">Bearbeiten</a>
-                    @unless ($meter->removed_on)
-                        <a class="btn-secondary" href="{{ route('readings.create', $meter) }}">Ablesung erfassen</a>
-                    @endunless
+                    @can('manage-master-data')<a class="link text-sm" href="{{ route('meters.edit', $meter) }}">Bearbeiten</a>@endcan
+                    @can('record-readings')
+                        @unless ($meter->removed_on)
+                            <a class="btn-secondary" href="{{ route('readings.create', $meter) }}">Ablesung erfassen</a>
+                        @endunless
+                    @endcan
                 </div>
             </div>
             <p class="mb-3 text-sm text-stone-500">Eingebaut am {{ $meter->installed_on->format('d.m.Y') }} mit Anfangsstand {{ Milli::format($meter->initial_value_milli) }} {{ $meter->type->unit() }}</p>
@@ -47,9 +51,11 @@
                                 @endif
                             </td>
                             <td class="text-right">
-                                @unless ($reading->isSuperseded())
-                                    <a class="link" href="{{ route('readings.correct', $reading) }}">Korrigieren</a>
-                                @endunless
+                                @can('record-readings')
+                                    @unless ($reading->isSuperseded())
+                                        <a class="link" href="{{ route('readings.correct', $reading) }}">Korrigieren</a>
+                                    @endunless
+                                @endcan
                             </td>
                         </tr>
                     @empty
