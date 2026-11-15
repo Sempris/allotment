@@ -23,6 +23,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('plots', PlotController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('/plots/{plot}/meters/create', [MeterController::class, 'create'])->name('meters.create');
     Route::post('/plots/{plot}/meters', [MeterController::class, 'store'])->name('meters.store');
+    Route::get('/meters/{meter}/edit', [MeterController::class, 'edit'])->name('meters.edit');
+    Route::put('/meters/{meter}', [MeterController::class, 'update'])->name('meters.update');
+    Route::delete('/meters/{meter}', [MeterController::class, 'destroy'])->name('meters.destroy');
+    Route::post('/meters/{meter}/retire', [MeterController::class, 'retire'])->name('meters.retire');
+    Route::post('/meters/{meter}/reactivate', [MeterController::class, 'reactivate'])->name('meters.reactivate');
 
     Route::get('/meters/{meter}/readings/create', [ReadingController::class, 'create'])->name('readings.create');
     Route::post('/meters/{meter}/readings', [ReadingController::class, 'store'])->name('readings.store');

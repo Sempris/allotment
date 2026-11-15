@@ -15,9 +15,12 @@
                     {{ $meter->type->label() }} · {{ $meter->serial_number }}
                     @if ($meter->removed_on)<span class="ml-2 rounded bg-stone-200 px-2 py-0.5 text-xs font-normal">ausgebaut am {{ $meter->removed_on->format('d.m.Y') }}</span>@endif
                 </h2>
-                @unless ($meter->removed_on)
-                    <a class="btn-secondary" href="{{ route('readings.create', $meter) }}">Ablesung erfassen</a>
-                @endunless
+                <div class="flex items-center gap-3">
+                    <a class="link text-sm" href="{{ route('meters.edit', $meter) }}">Bearbeiten</a>
+                    @unless ($meter->removed_on)
+                        <a class="btn-secondary" href="{{ route('readings.create', $meter) }}">Ablesung erfassen</a>
+                    @endunless
+                </div>
             </div>
             <p class="mb-3 text-sm text-stone-500">Eingebaut am {{ $meter->installed_on->format('d.m.Y') }} mit Anfangsstand {{ Milli::format($meter->initial_value_milli) }} {{ $meter->type->unit() }}</p>
 

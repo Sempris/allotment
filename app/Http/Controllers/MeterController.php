@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MeterType;
+use App\Enums\ReadingSource;
 use App\Exceptions\MeterChangeRejected;
 use App\Http\Requests\MeterRequest;
+use App\Http\Requests\MeterRetireRequest;
+use App\Http\Requests\MeterUpdateRequest;
 use App\Models\Meter;
 use App\Models\Plot;
 use App\Services\MeterExchange;
+use App\Services\MeterMaintenance;
 use App\Support\Milli;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -58,5 +62,58 @@ class MeterController extends Controller
         return redirect()->route('plots.show', $plot)->with(
             'status', "Zähler {$old->serial_number} ausgebaut und durch {$meter->serial_number} ersetzt.",
         );
+    }
+
+    public function edit(Meter $meter): View
+    {
+        return view('meters.edit', [
+            'meter' => $meter->load('plot'),
+            'hasReadings' => $meter->readings()->exists(),
+            'last' => $meter->effectiveReadings()->get()->last(),
+        ]);
+    }
+
+    public function update(MeterUpdateRequest $request, Meter $meter, MeterMaintenance $maintenance): RedirectResponse
+    {
+        try {
+            $maintenance->update($meter, $request->validated('serial_number'), $request->installedOn(), $request->initialValueMilli());
+        } catch (MeterChangeRejected $e) {
+            return back()->withErrors([$e->field => $e->reasons])->withInput();
+        }
+
+        return redirect()->route('plots.show', $meter->plot_id)->with('status', 'Zähler gespeichert.');
+    }
+
+    public function destroy(Meter $meter, MeterMaintenance $maintenance): RedirectResponse
+    {
+        try {
+            $maintenance->delete($meter);
+        } catch (MeterChangeRejected $e) {
+            return back()->withErrors(['meter' => $e->reasons]);
+        }
+
+        return redirect()->route('plots.show', $meter->plot_id)->with('status', "Zähler {$meter->serial_number} gelöscht.");
+    }
+
+    public function retire(MeterRetireRequest $request, Meter $meter, MeterMaintenance $maintenance): RedirectResponse
+    {
+        try {
+            $maintenance->retire($meter, $request->removedOn(), $request->finalValueMilli(), ReadingSource::Removal, $request->user());
+        } catch (MeterChangeRejected $e) {
+            return back()->withErrors([$e->field === 'date' ? 'removed_on' : $e->field => $e->reasons])->withInput();
+        }
+
+        return redirect()->route('plots.show', $meter->plot_id)->with('status', "Zähler {$meter->serial_number} ausgebaut.");
+    }
+
+    public function reactivate(Meter $meter, MeterMaintenance $maintenance): RedirectResponse
+    {
+        try {
+            $maintenance->reactivate($meter);
+        } catch (MeterChangeRejected $e) {
+            return back()->withErrors(['meter' => $e->reasons]);
+        }
+
+        return redirect()->route('plots.show', $meter->plot_id)->with('status', "Zähler {$meter->serial_number} ist wieder aktiv.");
     }
 }
