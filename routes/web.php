@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\BillingPeriodController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\MeterController;
@@ -58,6 +59,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/plots/{plot}', [PlotController::class, 'show'])->name('plots.show')->can('view-plot', 'plot');
 
     Route::middleware('can:manage-billing')->group(function () {
+        Route::post('/billing/key-date', [BillingPeriodController::class, 'store'])->name('billing.key-date.store');
+        Route::delete('/billing/key-date', [BillingPeriodController::class, 'destroy'])->name('billing.key-date.destroy');
         Route::post('/tariffs', [TariffController::class, 'store'])->name('tariffs.store');
         Route::delete('/tariffs/{tariff}', [TariffController::class, 'destroy'])->name('tariffs.destroy');
     });

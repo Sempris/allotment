@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BillingPeriod;
 use App\Services\BillingLine;
 use App\Services\BillingService;
 use App\Support\Milli;
@@ -16,11 +17,15 @@ class BillingController extends Controller
     public function index(Request $request): View
     {
         $year = $this->year($request);
+        $keyDates = BillingPeriod::keyDates();
 
         return view('billing.index', [
             'year' => $year,
             'rows' => $this->billing->forYear($year),
             'missingTariffs' => $this->billing->missingTariffs($year),
+            'keyDate' => $keyDates[$year] ?? null,
+            // Suggest the same day as last year when a key date is set for the first time.
+            'suggestedKeyDate' => ($keyDates[$year] ?? ($keyDates[$year - 1] ?? null)?->copy()->addYear())?->toDateString(),
         ]);
     }
 
@@ -32,7 +37,11 @@ class BillingController extends Controller
         return response()->streamDownload(function () use ($rows) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\u{FEFF}"); // so Excel opens umlauts correctly
-            fputcsv($out, ['Parzelle', 'Pächter/in', 'Zählerart', 'Zählernummer', 'Verbrauch', 'Einheit', 'Betrag (EUR)'], ';', '"', '');
+            // New columns are only ever appended, so existing spreadsheets keep working.
+            fputcsv($out, [
+                'Parzelle', 'Pächter/in', 'Zählerart', 'Zählernummer', 'Verbrauch', 'Einheit', 'Betrag (EUR)',
+                'Anfangsstand', 'Anfangsdatum', 'Endstand', 'Enddatum', 'Hinweis',
+            ], ';', '"', '');
 
             foreach ($rows as $row) {
                 /** @var BillingLine $line */
@@ -45,6 +54,11 @@ class BillingController extends Controller
                         $line->consumptionMilli === null ? 'Ablesung fehlt' : Milli::format($line->consumptionMilli),
                         $line->meter->type->unit(),
                         $line->costCents === null ? '' : number_format($line->costCents / 100, 2, ',', ''),
+                        $line->period ? Milli::format($line->period->start->milli) : '',
+                        $line->period?->start->date->format('d.m.Y') ?? '',
+                        $line->period ? Milli::format($line->period->end->milli) : '',
+                        $line->period?->end->date->format('d.m.Y') ?? '',
+                        $line->isInterpolated() ? 'auf Stichtag umgerechnet' : '',
                     ], ';', '"', '');
                 }
             }
