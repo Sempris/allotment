@@ -71,3 +71,14 @@ Zähler W-1001, eingebaut 01.04.2023 mit Anfangsstand 0, erste Ablesung 17.10.20
 - Pächterhistorie (wer hatte die Parzelle in welchem Jahr).
 - Änderungsprotokoll für Stammdaten.
 - Zählerart nachträglich ändern.
+
+## Ergebnis
+
+Umgesetzt wie geplant. Abweichungen:
+
+- Für den Ausbau ohne Ersatz gibt es eine eigene Quelle `ReadingSource::Removal` („Ausbau“),
+  statt die Quelle „Zählertausch“ mitzubenutzen. Im Verlauf soll stehen, was wirklich passiert ist.
+- `MeterExchangeRejected` wurde zu `MeterChangeRejected` verallgemeinert, weil dieselbe Art von
+  Ablehnung nun auch bei Bearbeiten, Löschen und Ausbau vorkommt. Das Feld für das Datum heißt im
+  Service neutral `date`; die Controller ordnen es ihrem Formularfeld zu.
+- Neue Invariante 7 in `CLAUDE.md`: Nur `MeterMaintenance::retire()` setzt `removed_on`.

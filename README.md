@@ -23,6 +23,9 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 
 - **Parzellen und Zähler** verwalten, inklusive **Zählertausch**: Der Endstand des alten Zählers ist
   Pflicht und wird als Ablesung gespeichert, damit der Verbrauch bis zum Ausbau abgerechnet wird.
+- **Stammdaten pflegen:** Parzellen (z. B. Pächterwechsel), Zähler und Tarife bearbeiten; Zähler
+  auch ohne Ersatz ausbauen und einen Ausbau zurücknehmen. Gelöscht werden kann nur, woran keine
+  Historie hängt (Parzelle ohne Zähler, Zähler ohne Ablesungen).
 - **Ablesungen erfassen**, einzeln im Formular oder als **CSV-Import** für den ganzen Ablesetag.
 - **Plausibilitätsprüfung** für jeden Wert, egal über welchen Weg er kommt:
   - *abgelehnt:* Stand kleiner als der vorherige, größer als ein späterer, Datum in der Zukunft,
@@ -106,6 +109,8 @@ app/
 ├── Services/
 │   ├── ReadingRecorder.php        einziger Schreibweg für Ablesungen (+ Korrektur)
 │   ├── PlausibilityChecker.php    harte Regeln und Verbrauchswarnung
+│   ├── MeterMaintenance.php       Zähler ändern, ausbauen, löschen – geprüft gegen die Ablesungen
+│   ├── MeterExchange.php          Zählertausch: Endstand + Ausbau + neuer Zähler in einer Transaktion
 │   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler
 │   ├── BillingService.php         Jahresabrechnung je Parzelle
 │   └── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
@@ -147,8 +152,9 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 - **Jahresverbrauch als Differenz der Ablesungen:** Die Abrechnung nimmt die letzte Ablesung im
   Jahr minus die letzte Ablesung davor. Das passt zum üblichen festen Ablesetag; bei sehr
   unterschiedlichen Ablesedaten wäre eine Interpolation auf einen Stichtag genauer.
-- **Keine Bearbeitung oder Löschung** von Parzellen, Zählern und Tarifen über die Oberfläche
-  (Tarife lassen sich überschreiben).
+- **Kein Änderungsprotokoll für Stammdaten:** Ablesungen behalten ihre Historie, geänderte
+  Stammdaten (Pächtername, Anfangsstand eines Zählers) nicht. Ältere Abrechnungen zeigen deshalb
+  den aktuellen Pächternamen.
 - **Keine Rechnungen als PDF** und kein Versand per E-Mail, nur der CSV-Export.
 - **SQLite** reicht für einen Verein. Die Sperre mit `lockForUpdate()` wirkt erst mit MySQL oder
   PostgreSQL wirklich; SQLite sperrt ohnehin die ganze Datenbank beim Schreiben.

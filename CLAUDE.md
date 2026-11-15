@@ -40,6 +40,8 @@ npm run build                          # Tailwind/Vite-Build
    CSV und PDF als solche erkennbar.
 6. **Stammdaten mit Historie werden nicht gelöscht.** Löschen ist nur erlaubt, solange nichts
    daran hängt (Parzelle ohne Zähler, Zähler ohne Ablesungen).
+7. **Ein ausgebauter Zähler hat einen Endstand.** `removed_on` wird nur von
+   `MeterMaintenance::retire()` gesetzt; am Ausbautag gibt es eine wirksame Ablesung, danach keine.
 
 ## Konventionen
 
@@ -87,7 +89,8 @@ Commit-Nachrichten: deutsch, Imperativ-frei beschreibend, mit Bereich vorweg, z.
 ```
 app/Enums/        MeterType, ReadingSource
 app/Services/     ReadingRecorder (Schreibweg), PlausibilityChecker, ConsumptionCalculator,
-                  BillingService, ReadingCsvImporter
+                  BillingService, ReadingCsvImporter, MeterMaintenance (einzige Stelle, die
+                  Zähler ändert/ausbaut/löscht), MeterExchange
 app/Support/      Milli (Einlesen/Ausgabe von Ständen und Beträgen)
 app/Http/         Controller + Form Requests
 docs/plaene/      Pläne je Aufgabe, in der Reihenfolge der Umsetzung
