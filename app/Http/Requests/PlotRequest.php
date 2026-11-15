@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PlotRequest extends FormRequest
 {
@@ -10,7 +11,7 @@ class PlotRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'number' => ['required', 'string', 'max:20', 'unique:plots,number'],
+            'number' => ['required', 'string', 'max:20', Rule::unique('plots', 'number')->ignore($this->route('plot'))],
             'tenant_name' => ['required', 'string', 'max:120'],
             'tenant_email' => ['nullable', 'email', 'max:255'],
         ];

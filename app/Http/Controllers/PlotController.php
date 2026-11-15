@@ -40,4 +40,28 @@ class PlotController extends Controller
 
         return view('plots.show', ['plot' => $plot, 'meters' => $meters]);
     }
+
+    public function edit(Plot $plot): View
+    {
+        return view('plots.edit', ['plot' => $plot, 'hasMeters' => $plot->meters()->exists()]);
+    }
+
+    public function update(PlotRequest $request, Plot $plot): RedirectResponse
+    {
+        $plot->update($request->validated());
+
+        return redirect()->route('plots.show', $plot)->with('status', 'Parzelle gespeichert.');
+    }
+
+    public function destroy(Plot $plot): RedirectResponse
+    {
+        // Plots with meters keep their history; the foreign key would refuse the delete anyway.
+        if ($plot->meters()->exists()) {
+            return back()->withErrors(['plot' => 'Die Parzelle hat Zähler und kann nicht gelöscht werden. Bei einem Pächterwechsel bitte nur den Namen ändern.']);
+        }
+
+        $plot->delete();
+
+        return redirect()->route('plots.index')->with('status', "Parzelle {$plot->number} gelöscht.");
+    }
 }

@@ -20,7 +20,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/', DashboardController::class)->name('dashboard');
 
-    Route::resource('plots', PlotController::class)->only(['index', 'create', 'store', 'show']);
+    Route::resource('plots', PlotController::class);
     Route::get('/plots/{plot}/meters/create', [MeterController::class, 'create'])->name('meters.create');
     Route::post('/plots/{plot}/meters', [MeterController::class, 'store'])->name('meters.store');
     Route::get('/meters/{meter}/edit', [MeterController::class, 'edit'])->name('meters.edit');

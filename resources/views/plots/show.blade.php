@@ -5,7 +5,10 @@
             <h1 class="text-2xl font-semibold">Parzelle {{ $plot->number }}</h1>
             <p class="text-sm text-stone-500">{{ $plot->tenant_name }}@if ($plot->tenant_email) · {{ $plot->tenant_email }}@endif</p>
         </div>
-        <a href="{{ route('meters.create', $plot) }}" class="btn">Zähler anlegen / tauschen</a>
+        <div class="flex items-center gap-4">
+            <a href="{{ route('plots.edit', $plot) }}" class="link text-sm">Parzelle bearbeiten</a>
+            <a href="{{ route('meters.create', $plot) }}" class="btn">Zähler anlegen / tauschen</a>
+        </div>
     </div>
 
     @forelse ($meters as $meter)
