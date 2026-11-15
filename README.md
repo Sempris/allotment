@@ -42,6 +42,11 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
 - **Abrechnung auf einen Stichtag:** Liegen die Ablesetage weit auseinander, lässt sich ein Jahr auf
   einen Stichtag umrechnen. Die Stände werden zwischen den Ablesungen interpoliert und sind überall
   mit ≈ gekennzeichnet; jede Zeile zeigt Anfangs- und Endstand mit Datum.
+- **Abrechnung als PDF** je Parzelle mit Anfangs- und Endstand, Preis, Grundgebühr und Bankverbindung;
+  **Versand per E-Mail** (einzeln oder „alle offenen“) oder „ausgedruckt übergeben“. Herausgegeben
+  wird nur, was vollständig ist und keine zur Prüfung markierte Ablesung mehr enthält. Ein
+  Versandprotokoll zeigt je Parzelle den Stand und warnt, wenn sich der Betrag danach ändert.
+  Pächter laden ihre herausgegebene Abrechnung selbst herunter.
 - Übersicht, welche Zähler im laufenden Jahr **noch nicht abgelesen** sind.
 
 ## Schnellstart
@@ -69,7 +74,12 @@ Dann <http://localhost:8000> öffnen und anmelden. Alle Demo-Zugänge haben das 
 
 Die Demodaten enthalten acht Parzellen mit Ablesungen von 2023 bis 2026. Zwei Parzellen sind
 für 2026 noch nicht abgelesen, und Parzelle 7 hat 2026 einen auffällig hohen Wasserverbrauch
-(ein Rohrbruch), der in der Prüfliste erscheint.
+(ein Rohrbruch), der in der Prüfliste erscheint – ihre Abrechnung lässt sich erst versenden, wenn
+der Wert bestätigt oder korrigiert ist. Die Parzellen 2 und 6 haben keine E-Mail-Adresse und
+bekommen die Abrechnung ausgedruckt.
+
+E-Mails landen in der Demo in `storage/logs/laravel.log` (`MAIL_MAILER=log`). Vereinsname, Anschrift
+und Bankverbindung für die PDF stehen in `.env` (`CLUB_*`).
 
 Tests ausführen:
 
@@ -112,6 +122,10 @@ als der vorherige Stand“ gegen denselben alten Stand bestehen.
 blockiert nicht den ganzen Ablesetag; das Ergebnis zeigt pro Zeile, was importiert, markiert oder
 abgelehnt wurde und warum. Nur eine falsche Kopfzeile lehnt die ganze Datei ab.
 
+**Die Prüfliste hat Folgen.** Eine Abrechnung lässt sich erst herausgeben, wenn keine ihrer
+Ablesungen mehr zur Prüfung markiert ist. Sonst wäre die Markierung nur ein Hinweis, den man
+überlesen kann – und der Zahlendreher landet als Rechnung beim Pächter.
+
 **Rechte heißen nach dem, was sie erlauben.** Routen und Views fragen nie „ist Vorstand?“, sondern
 `record-readings`, `manage-billing`, `view-plot` … Die Zuordnung Rolle → Recht steht an genau einer
 Stelle (`AppServiceProvider`) und ist als Matrix getestet. Die Kassiererin rechnet ab, ändert aber
@@ -134,6 +148,8 @@ app/
 │   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler, optional interpoliert auf einen Stichtag
 │   ├── BillingService.php         Jahresabrechnung je Parzelle
 │   ├── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
+│   ├── InvoiceRenderer.php        Abrechnung einer Parzelle als PDF
+│   ├── InvoiceDispatcher.php      Abrechnungen herausgeben (E-Mail/Ausdruck) mit Versandprotokoll
 │   └── UserAdministration.php     Zugänge anlegen, sperren, löschen – ohne den Verein auszusperren
 ├── Support/Milli.php   Zählerstände und Geld ohne Floats
 └── Http/               schlanke Controller, Validierung in Form Requests
@@ -152,7 +168,8 @@ app/
   (nicht nur ausgeblendete Links) und als Matrix getestet, Login mit Rate-Limit (5 Versuche pro Minute),
   CSRF-Schutz in allen Formularen, Validierung jeder Eingabe in Form Requests, Upload auf
   CSV/TXT bis 1 MB begrenzt, Ausgabe in Blade escaped.
-- **Manuell geprüft:** alle Seiten mit den Demodaten im Browser durchgegangen, inklusive Import der Beispieldatei.
+- **Manuell geprüft:** alle Seiten mit den Demodaten im Browser durchgegangen (je Rolle), inklusive
+  Import der Beispieldatei, Stichtagsumrechnung, PDF-Abruf und Versand „alle offenen“ ins Mail-Log.
 
 ## Eingesetzte KI-Werkzeuge und Vorgehen
 
@@ -181,12 +198,14 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 - **Kein Änderungsprotokoll für Stammdaten:** Ablesungen behalten ihre Historie, geänderte
   Stammdaten (Pächtername, Anfangsstand eines Zählers) nicht. Ältere Abrechnungen zeigen deshalb
   den aktuellen Pächternamen.
-- **Keine Rechnungen als PDF** und kein Versand per E-Mail, nur der CSV-Export.
+- **PDF wird nicht archiviert:** Die Abrechnung entsteht bei jedem Abruf aus den aktuellen Daten.
+  Das Versandprotokoll merkt sich den herausgegebenen Betrag und warnt bei Abweichungen, speichert
+  aber nicht das Dokument. Zahlungseingänge und Mahnungen werden nicht verfolgt.
 - **SQLite** reicht für einen Verein. Die Sperre mit `lockForUpdate()` wirkt erst mit MySQL oder
   PostgreSQL wirklich; SQLite sperrt ohnehin die ganze Datenbank beim Schreiben.
 
 ## Mögliche nächste Schritte
 
-- PDF-Rechnung pro Parzelle und Versand an die hinterlegte E-Mail-Adresse
+- Jahresabschluss: Stände und PDF festschreiben, sobald die Abrechnungen herausgegeben sind
 - Ablesung per Smartphone direkt an der Parzelle (die Formulare sind bereits responsiv)
 - Foto des Zählers zur Ablesung speichern, als Beleg bei Rückfragen

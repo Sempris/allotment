@@ -89,3 +89,20 @@ Strom 152,7 kWh × 0,37 € + 18,00 € = 74,50 €; Summe **188,70 €**.
 - Archivierte PDF-Dateien (die PDF wird bei jedem Abruf aus den aktuellen Daten erzeugt).
 - Zahlungseingänge, Mahnungen, SEPA-Lastschrift.
 - Fortlaufende Rechnungsnummern, Umsatzsteuer.
+
+## Ergebnis
+
+Umgesetzt wie geplant. Abweichungen und Beobachtungen:
+
+- **Reihenfolge:** Die Pächteransicht (Schritt 5) wurde vor der Abrechnungsseite (Schritt 4)
+  committet, weil die HTTP-Tests des Versands beides zusammen brauchen.
+- **Layout der PDF** zweimal nachgeschärft, nachdem die erste Fassung gerendert und angesehen
+  wurde: Die Tabelle lief rechts über den Seitenrand, „Stand von/bis“ brach unschön um.
+- **Demodaten** hatten keine E-Mail-Adressen; „Alle offenen versenden“ hätte in der Demo nichts
+  versendet. Sechs Parzellen haben jetzt eine Adresse, zwei nicht. Ein Test hält Demodaten und
+  README synchron.
+- `User::hasReadingHistory()` heißt jetzt `hasHistory()` und zählt versendete Abrechnungen mit:
+  Auch die Kassiererin, die Abrechnungen versendet hat, wird gesperrt statt gelöscht.
+- Eine Parzelle mit herausgegebenen Abrechnungen lässt sich nicht löschen (ergänzt Plan 02).
+- Im Browser mit den Demodaten geprüft: drei E-Mails mit PDF-Anhang im Mail-Log, Parzellen 2 und 6
+  als „ohne E-Mail-Adresse“, Parzellen 5, 7 und 8 als „nicht vollständig oder nicht geprüft“ gemeldet.

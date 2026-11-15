@@ -48,10 +48,13 @@ npm run build                          # Tailwind/Vite-Build
    sondern nach dem Recht. Eine neue Route ohne Gate ist ein Fehler; dazu gehört ein Test, der
    den Zugriff für eine nicht berechtigte Rolle mit 403 belegt.
 9. **Wer im Verlauf steht, verschwindet nicht.** Benutzer mit erfassten oder geprüften Ablesungen
-   werden gesperrt, nicht gelöscht. Es gibt immer mindestens einen aktiven Vorstand.
+   oder versendeten Abrechnungen werden gesperrt, nicht gelöscht. Es gibt immer mindestens einen aktiven Vorstand.
 10. **Abrechnungsjahre schließen lückenlos an.** Verbrauch(J) = Grenzstand(J) − letzter bestimmbarer
     Grenzstand davor. Wer die Verbrauchsberechnung ändert, muss diese Kette erhalten (Tests in
     `KeyDateConsumptionTest`).
+11. **Herausgegeben wird nur, was vollständig und geprüft ist.** Abrechnungen verlassen das System
+    ausschließlich über `InvoiceDispatcher` (E-Mail oder „übergeben“), der Vollständigkeit und
+    offene Prüfungen kontrolliert und jede Herausgabe mit Betrag protokolliert.
 
 ## Konventionen
 
@@ -100,7 +103,9 @@ Commit-Nachrichten: deutsch, Imperativ-frei beschreibend, mit Bereich vorweg, z.
 app/Enums/        MeterType, ReadingSource, Role
 app/Services/     ReadingRecorder (Schreibweg), PlausibilityChecker, ConsumptionCalculator,
                   BillingService, ReadingCsvImporter, MeterMaintenance (einzige Stelle, die
-                  Zähler ändert/ausbaut/löscht), MeterExchange, UserAdministration
+                  Zähler ändert/ausbaut/löscht), MeterExchange, UserAdministration,
+                  InvoiceRenderer (PDF), InvoiceDispatcher (Herausgabe + Versandprotokoll)
+config/club.php   Vereinsdaten für die PDF (aus .env)
 app/Providers/    AppServiceProvider: Zuordnung Rolle → Recht (Gates)
 app/Support/      Milli (Einlesen/Ausgabe von Ständen und Beträgen)
 app/Http/         Controller + Form Requests
