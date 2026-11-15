@@ -88,3 +88,17 @@ Zähler mit genau 0,100 m³ pro Tag: eingebaut 01.04.2024 bei 0.
 - Jahresabschluss mit festgeschriebenen Ständen (eine spätere Korrektur einer Ablesung ändert
   weiterhin die Abrechnung des betroffenen Jahres).
 - Gewichtete Interpolation nach Saison (Gradtagszahlen o. Ä.).
+
+## Ergebnis
+
+Umgesetzt wie geplant. Erst bei der Umsetzung aufgefallen:
+
+- **Ausgebauter Zähler über die Jahresgrenze:** Wird ein Zähler nach dem Stichtag, aber noch im
+  selben Kalenderjahr ausgebaut, liegt sein Restverbrauch im nächsten Abrechnungsjahr – dort gibt
+  es aber keine Ablesung mehr. Ohne Sonderregel hätte die Zeile „Ablesung fehlt“ gezeigt und der
+  Verbrauch wäre nie abgerechnet worden. Der Grenzstand ist in diesem Fall der Endstand des
+  Zählers (Test: 46 Tage × 0,1 m³ = 4,600 m³ im Folgejahr).
+- Die Auswahl der Zähler für ein Jahr richtet sich deshalb nach den Jahresgrenzen (Ende Vorjahr
+  bis Ende dieses Jahres) statt nach dem Kalenderjahr.
+- Die Abrechnungsseite zeigte Parzellen ohne Zähler bisher als verrutschte Summenzeile; sie
+  bekommen jetzt eine eigene Zeile. Parzellen werden natürlich sortiert (2 vor 10).

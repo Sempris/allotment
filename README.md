@@ -39,6 +39,9 @@ Prüfung, bildet Zählertausch sauber ab und behält bei Korrekturen den ursprü
   eigene Parzelle. Zugänge legt der Vorstand in der Oberfläche an; wer im Verlauf der Ablesungen
   steht, wird gesperrt statt gelöscht, und der letzte Vorstand kann sich nicht aussperren.
 - **Jahresabrechnung** pro Parzelle mit Tarifen je Jahr (Preis je Einheit + Grundgebühr) und **CSV-Export** für Excel.
+- **Abrechnung auf einen Stichtag:** Liegen die Ablesetage weit auseinander, lässt sich ein Jahr auf
+  einen Stichtag umrechnen. Die Stände werden zwischen den Ablesungen interpoliert und sind überall
+  mit ≈ gekennzeichnet; jede Zeile zeigt Anfangs- und Endstand mit Datum.
 - Übersicht, welche Zähler im laufenden Jahr **noch nicht abgelesen** sind.
 
 ## Schnellstart
@@ -91,6 +94,12 @@ Rohrbruch sein → speichern, aber markieren). Die Entscheidung bleibt beim Vors
 (1 m³ = 1000), Preise in Cent. Gerundet wird genau einmal, beim Betrag, kaufmännisch auf ganze
 Cent. Die Klasse `App\Support\Milli` übernimmt Einlesen (auch deutsches Format wie `1.234,567`) und Ausgabe.
 
+**Jahre schließen lückenlos aneinander an.** Jedes Abrechnungsjahr endet je Zähler an einem
+Grenzstand, das nächste beginnt dort: ohne Stichtag ist das die letzte Ablesung im Jahr, mit
+Stichtag der interpolierte Stand an diesem Tag. So wird beim Umstellen kein Verbrauch doppelt oder
+gar nicht abgerechnet. Interpoliert wird ganzzahlig; hochgerechnet wird nie, weil sich ein
+hochgerechneter Wert – und damit eine verschickte Abrechnung – mit der nächsten Ablesung ändern würde.
+
 **Ablesungen werden nie überschrieben.** Eine Korrektur legt eine neue Ablesung an und verweist die
 alte darauf (`superseded_by_id`). Berechnungen nutzen nur die „wirksamen“ Ablesungen
 (`effectiveReadings`). So bleibt nachvollziehbar, was geändert wurde, von wem und warum.
@@ -122,7 +131,7 @@ app/
 │   ├── PlausibilityChecker.php    harte Regeln und Verbrauchswarnung
 │   ├── MeterMaintenance.php       Zähler ändern, ausbauen, löschen – geprüft gegen die Ablesungen
 │   ├── MeterExchange.php          Zählertausch: Endstand + Ausbau + neuer Zähler in einer Transaktion
-│   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler
+│   ├── ConsumptionCalculator.php  Jahresverbrauch je Zähler, optional interpoliert auf einen Stichtag
 │   ├── BillingService.php         Jahresabrechnung je Parzelle
 │   ├── ReadingCsvImporter.php     zeilenweiser CSV-Import mit Ergebnisbericht
 │   └── UserAdministration.php     Zugänge anlegen, sperren, löschen – ohne den Verein auszusperren
@@ -134,7 +143,8 @@ app/
 
 - **Automatisierte Tests** (PHPUnit, `php artisan test`): Einlesen von Zahlen, alle Plausibilitätsregeln,
   Erfassen, Ablehnen und Korrigieren über HTTP, Zählertausch, Prüfliste, CSV-Import mit gemischten
-  Zeilen, Verbrauchs- und Kostenberechnung bis auf den Cent, fehlende Ablesungen und Tarife,
+  Zeilen, Verbrauchs- und Kostenberechnung bis auf den Cent, Stichtagsumrechnung mit von Hand
+  nachrechenbaren Beispielen (Zähler mit genau 0,1 m³ pro Tag), fehlende Ablesungen und Tarife,
   CSV-Export und Zugriffsschutz.
 - **Fachliche Testfälle statt Zufallsdaten:** Die Tests rechnen konkrete Beispiele nach
   (z. B. 38,255 m³ × 2,80 € = 107,11 €), damit ein Fehler in der Rundung sofort auffällt.
@@ -163,9 +173,11 @@ Die Anwendung ist mit **Claude (Anthropic) als Coding-Agent** entstanden. Mein V
 - **Feste Rollen, ein Pächterzugang je Parzelle:** Die drei Rollen sind im Code festgelegt, nicht
   konfigurierbar. Es gibt kein „Passwort vergessen“ per E-Mail (der Vorstand setzt ein neues
   Startpasswort) und keine Zwei-Faktor-Anmeldung.
-- **Jahresverbrauch als Differenz der Ablesungen:** Die Abrechnung nimmt die letzte Ablesung im
-  Jahr minus die letzte Ablesung davor. Das passt zum üblichen festen Ablesetag; bei sehr
-  unterschiedlichen Ablesedaten wäre eine Interpolation auf einen Stichtag genauer.
+- **Stichtagsabrechnung ist eine Näherung:** Die Umrechnung auf einen Stichtag nimmt gleichmäßigen
+  Verbrauch zwischen zwei Ablesungen an (im Winter ist das Wasser abgestellt). Für wenige Wochen
+  Verschiebung ist der Fehler klein. Es wird nie über die letzte Ablesung hinaus hochgerechnet.
+- **Kein Jahresabschluss:** Abrechnungen werden nicht festgeschrieben. Wird eine Ablesung später
+  korrigiert, ändert sich die Abrechnung des betroffenen Jahres.
 - **Kein Änderungsprotokoll für Stammdaten:** Ablesungen behalten ihre Historie, geänderte
   Stammdaten (Pächtername, Anfangsstand eines Zählers) nicht. Ältere Abrechnungen zeigen deshalb
   den aktuellen Pächternamen.

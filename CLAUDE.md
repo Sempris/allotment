@@ -37,7 +37,8 @@ npm run build                          # Tailwind/Vite-Build
    speichert nichts und entscheidet nur. Die Entscheidung über markierte Werte trifft ein Mensch.
 5. **Nichts schätzen, ohne es zu kennzeichnen.** Fehlt eine Ablesung oder ein Tarif, zeigt die
    Abrechnung das an. Rechnerisch ermittelte Werte (z. B. Stichtagsumrechnung) sind in Oberfläche,
-   CSV und PDF als solche erkennbar.
+   CSV und PDF als solche erkennbar (≈). Zählerstände werden nur zwischen zwei Ablesungen
+   interpoliert, nie über die letzte Ablesung hinaus hochgerechnet.
 6. **Stammdaten mit Historie werden nicht gelöscht.** Löschen ist nur erlaubt, solange nichts
    daran hängt (Parzelle ohne Zähler, Zähler ohne Ablesungen).
 7. **Ein ausgebauter Zähler hat einen Endstand.** `removed_on` wird nur von
@@ -48,6 +49,9 @@ npm run build                          # Tailwind/Vite-Build
    den Zugriff für eine nicht berechtigte Rolle mit 403 belegt.
 9. **Wer im Verlauf steht, verschwindet nicht.** Benutzer mit erfassten oder geprüften Ablesungen
    werden gesperrt, nicht gelöscht. Es gibt immer mindestens einen aktiven Vorstand.
+10. **Abrechnungsjahre schließen lückenlos an.** Verbrauch(J) = Grenzstand(J) − letzter bestimmbarer
+    Grenzstand davor. Wer die Verbrauchsberechnung ändert, muss diese Kette erhalten (Tests in
+    `KeyDateConsumptionTest`).
 
 ## Konventionen
 
